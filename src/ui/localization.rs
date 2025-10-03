@@ -150,10 +150,10 @@ impl Localization {
     /// Format measurement statistics based on selected language
     pub fn get_measurement_stats(&self, mean: f64, p95: f64, mad: f64, outliers: usize) -> String {
         match self.language {
-            Language::English => format!("       μ={:.4} ms, p95={:.4} ms, MAD={:.4} ms, outliers={}", mean, p95, mad, outliers),
-            Language::Ukrainian => format!("       μ={:.4} мс, p95={:.4} мс, MAD={:.4} мс, викидів={}", mean, p95, mad, outliers),
-            Language::Russian => format!("       μ={:.4} ms, p95={:.4} ms, MAD={:.4} ms, выбросов={}", mean, p95, mad, outliers),
-            Language::Chinese => format!("       μ={:.4} 毫秒, p95={:.4} 毫秒, MAD={:.4} 毫秒, 异常值={}", mean, p95, mad, outliers),
+            Language::English => format!("       mean={:.4} ms, p95={:.4} ms, MAD={:.4} ms, outliers={}", mean, p95, mad, outliers),
+            Language::Ukrainian => format!("       середнє={:.4} мс, p95={:.4} мс, MAD={:.4} мс, викидів={}", mean, p95, mad, outliers),
+            Language::Russian => format!("       среднее={:.4} ms, p95={:.4} ms, MAD={:.4} ms, выбросов={}", mean, p95, mad, outliers),
+            Language::Chinese => format!("       平均={:.4} 毫秒, p95={:.4} 毫秒, MAD={:.4} 毫秒, 异常值={}", mean, p95, mad, outliers),
         }
     }
     

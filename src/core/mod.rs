@@ -661,7 +661,7 @@ async fn optimize_timer_resolution(
     let init_pb = ProgressBar::new(initial_points.len() as u64);
     init_pb.set_style(
         ProgressStyle::default_bar()
-            .template("{spinner:.green} [{elapsed_precise}] [{bar:40.cyan/blue}] {pos}/{len} initialization points {wide_msg}")
+            .template("[{elapsed_precise}] [{bar:40.cyan/blue}] {pos}/{len} initialization points {wide_msg}")
             .unwrap()
             .progress_chars("##-")
     );
@@ -690,7 +690,7 @@ async fn optimize_timer_resolution(
     let opt_pb = ProgressBar::new(total_iterations as u64);
     opt_pb.set_style(
         ProgressStyle::default_bar()
-            .template("{spinner:.green} [{elapsed_precise}] [{bar:40.cyan/blue}] {pos}/{len} оптимизационных итераций {wide_msg}")
+            .template("[{elapsed_precise}] [{bar:40.cyan/blue}] {pos}/{len} оптимизационных итераций {wide_msg}")
             .unwrap()
             .progress_chars("##-")
     );
@@ -1090,7 +1090,7 @@ async fn linear_exhaustive_search(
     let pb = ProgressBar::new(total_points as u64);
     pb.set_style(
         ProgressStyle::default_bar()
-            .template("{spinner:.green} [{elapsed_precise}] [{bar:40.cyan/blue}] {pos}/{len} {msg}")
+            .template("[{elapsed_precise}] [{bar:40.cyan/blue}] {pos}/{len} {msg}")
             .unwrap()
             .progress_chars("##-")
     );
