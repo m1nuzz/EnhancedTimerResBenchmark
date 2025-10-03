@@ -25,69 +25,6 @@ use crate::optimization::bayesian_optimizer::BayesianOptimizer;
 use crate::optimization::topsis::{topsis_ranking, TopsisScore};
 use crate::ui::localization::{Localization, LocalizationKey, select_language};
 
-// NtSetTimerResolution functions for global timer resolution (Windows 10 2004+ and Windows 11)
-use windows_sys::Win32::Foundation::NTSTATUS;
-#[link(name = "ntdll")]
-extern "system" {
-    // NtSetTimerResolution sets GLOBAL resolution (works on Windows 11)
-    fn NtSetTimerResolution(
-        DesiredResolution: u32,  // In 100-nanosecond units
-        SetResolution: i32,      // TRUE (1) = set, FALSE (0) = query
-        CurrentResolution: *mut u32,
-    ) -> NTSTATUS;
-    fn NtQueryTimerResolution(
-        MinimumResolution: *mut u32,
-        MaximumResolution: *mut u32,
-        CurrentResolution: *mut u32,
-    ) -> NTSTATUS;
-}
-
-// ============================================================================ 
-// GLOBAL TIMER RESOLUTION FUNCTIONS (Windows 10 2004+ and Windows 11)
-// ============================================================================
-
-/// Set global timer resolution using NtSetTimerResolution (works on Windows 11)
-fn set_global_timer_resolution(resolution_ms: f64) -> io::Result<f64> {
-    unsafe {
-        // Conversion: milliseconds → 100-nanosecond units
-        // 0.5 ms = 500 microseconds = 5000 * 100ns
-        let desired = (resolution_ms * 10_000.0) as u32;
-        let mut current: u32 = 0;
-        let status = NtSetTimerResolution(desired, 1, &mut current);
-        if status == 0 {  // STATUS_SUCCESS
-            let actual_ms = current as f64 / 10_000.0;
-            Ok(actual_ms)
-        } else {
-            Err(Error::new(
-                ErrorKind::Other,
-                format!("NtSetTimerResolution failed with status: 0x{:X}", status)
-            ))
-        }
-    }
-}
-
-/// Query current global timer resolution
-fn query_timer_resolution() -> io::Result<(f64, f64, f64)> {
-    unsafe {
-        let mut min_res: u32 = 0;
-        let mut max_res: u32 = 0;
-        let mut current_res: u32 = 0;
-        let status = NtQueryTimerResolution(&mut min_res, &mut max_res, &mut current_res);
-        if status == 0 {  // STATUS_SUCCESS
-            Ok((
-                min_res as f64 / 10_000.0,  // minimum in ms
-                max_res as f64 / 10_000.0,  // maximum in ms
-                current_res as f64 / 10_000.0  // current in ms
-            ))
-        } else {
-            Err(Error::new(
-                ErrorKind::Other,
-                format!("NtQueryTimerResolution failed with status: 0x{:X}", status)
-            ))
-        }
-    }
-}
-
 // ============================================================================ 
 // CONFIGURATION STRUCTURES
 // ============================================================================
@@ -1102,7 +1039,13 @@ async fn linear_exhaustive_search(
     println!();
     
     let estimated_time = (total_points as f64 * 6.5) / 60.0;
-    println!("⏱️  Приблизительное время: {:.1} минут\n", estimated_time);
+    let estimated_time_text = match localization.language {
+        crate::ui::language::Language::English => format!("⏱️  Estimated time: {:.1} minutes\n", estimated_time),
+        crate::ui::language::Language::Russian => format!("⏱️  Приблизительное время: {:.1} минут\n", estimated_time),
+        crate::ui::language::Language::Ukrainian => format!("⏱️  Приблизний час: {:.1} хвилин\n", estimated_time),
+        crate::ui::language::Language::Chinese => format!("⏱️  估计时间: {:.1} 分钟\n", estimated_time),
+    };
+    println!("{}", estimated_time_text);
 
     let pb = ProgressBar::new(total_points as u64);
     pb.set_style(
