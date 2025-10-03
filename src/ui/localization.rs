@@ -120,30 +120,30 @@ impl Localization {
     /// Format phase 1 information based on selected language
     pub fn get_phase1(&self, count: usize) -> String {
         match self.language {
-            Language::English => format!("рџ”¬ Phase 1: Initialization ({} points)", count),
-            Language::Ukrainian => format!("рџ”¬ Р¤Р°Р·Р° 1: Р†РЅС–С†С–Р°Р»С–Р·Р°С†С–СЏ ({} С‚РѕС‡РєРё)", count),
-            Language::Russian => format!("рџ”¬ Р¤Р°Р·Р° 1: РРЅРёС†РёР°Р»РёР·Р°С†РёСЏ ({} С‚РѕС‡РєРё)", count),
-            Language::Chinese => format!("рџ”¬ й¶ж®µ 1: е€ќе§‹еЊ– ({} з‚№)", count),
+            Language::English => format!("[INIT] Phase 1: Initialization ({} points)", count),
+            Language::Ukrainian => format!("[INIT] Р¤Р°Р·Р° 1: Р†РЅС–С†С–Р°Р»С–Р·Р°С†С–СЏ ({} С‚РѕС‡РєРё)", count),
+            Language::Russian => format!("[INIT] Р¤Р°Р·Р° 1: РРЅРёС†РёР°Р»РёР·Р°С†РёСЏ ({} С‚РѕС‡РєРё)", count),
+            Language::Chinese => format!("[INIT] й¶ж®µ 1: е€ќе§‹еЊ– ({} з‚№)", count),
         }
     }
     
     /// Format point information based on selected language
     pub fn get_point_info(&self, current: usize, total: usize, resolution: f64) -> String {
         match self.language {
-            Language::English => format!("  рџ“Ќ {}/{}: {:.4} ms", current, total, resolution),
-            Language::Ukrainian => format!("  рџ“Ќ {}/{}: {:.4} РјСЃ", current, total, resolution),
-            Language::Russian => format!("  рџ“Ќ {}/{}: {:.4} ms", current, total, resolution),
-            Language::Chinese => format!("  рџ“Ќ {}/{}: {:.4} жЇ«з§’", current, total, resolution),
+            Language::English => format!("  [POINT] {}/{}: {:.4} ms", current, total, resolution),
+            Language::Ukrainian => format!("  [POINT] {}/{}: {:.4} РјСЃ", current, total, resolution),
+            Language::Russian => format!("  [POINT] {}/{}: {:.4} ms", current, total, resolution),
+            Language::Chinese => format!("  [POINT] {}/{}: {:.4} жЇ«з§’", current, total, resolution),
         }
     }
     
     /// Format measurement information with runs and samples based on selected language
     pub fn get_measurement_with_runs(&self, resolution: f64, runs: usize, samples: i32) -> String {
         match self.language {
-            Language::English => format!("    рџ”¬ Measurement {:.4} ms ({} runs Г— {} samples)...", resolution, runs, samples),
-            Language::Ukrainian => format!("    рџ”¬ Р’РёРјС–СЂСЋРІР°РЅРЅСЏ {:.4} РјСЃ ({} Р·Р°РїСѓСЃРєС–РІ Г— {} РІРёР±С–СЂРѕРє)...", resolution, runs, samples),
-            Language::Russian => format!("    рџ”¬ РР·РјРµСЂРµРЅРёРµ {:.4} ms ({} РїСЂРѕРіРѕРЅРѕРІ Г— {} РІС‹Р±РѕСЂРѕРє)...", resolution, runs, samples),
-            Language::Chinese => format!("    рџ”¬ жµ‹й‡Џ {:.4} жЇ«з§’ ({} ж¬ЎиїђиЎЊ Г— {} ж ·жњ¬)...", resolution, runs, samples),
+            Language::English => format!("    [TEST] Measurement {:.4} ms ({} runs x {} samples)...", resolution, runs, samples),
+            Language::Ukrainian => format!("    [TEST] Р’РёРјС–СЂСЋРІР°РЅРЅСЏ {:.4} РјСЃ ({} Р·Р°РїСѓСЃРєС–РІ x {} РІРёР±С–СЂРѕРє)...", resolution, runs, samples),
+            Language::Russian => format!("    [TEST] РР·РјРµСЂРµРЅРёРµ {:.4} ms ({} РїСЂРѕРіРѕРЅРѕРІ x {} РІС‹Р±РѕСЂРѕРє)...", resolution, runs, samples),
+            Language::Chinese => format!("    [TEST] жµ‹й‡Џ {:.4} жЇ«з§’ ({} ж¬ЎиїђиЎЊ x {} ж ·жњ¬)...", resolution, runs, samples),
         }
     }
     
