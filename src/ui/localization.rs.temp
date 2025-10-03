@@ -1,0 +1,244 @@
+//! Localization module for multilingual support
+//!
+//! This module provides internationalization support for all UI elements
+//! in the timer resolution benchmark tool.
+
+use crate::ui::language::Language;
+pub use crate::ui::localization_key::LocalizationKey;
+
+/// Localization system for multilingual support
+pub struct Localization {
+    pub language: Language,
+}
+
+impl Localization {
+    /// Create a new localization instance for the specified language
+    pub fn new(language: Language) -> Self {
+        Self { language }
+    }
+    
+    /// Get localized string for a given key
+    pub fn get(&self, key: LocalizationKey) -> &'static str {
+        match self.language {
+            Language::English => key.get_english(),
+            Language::Ukrainian => key.get_ukrainian(),
+            Language::Russian => key.get_russian(),
+            Language::Chinese => key.get_chinese(),
+        }
+    }
+    
+    /// Format working directory string based on selected language
+    pub fn get_working_dir(&self, path: &str) -> String {
+        match self.language {
+            Language::English => format!("📂 Working Directory: {}", path),
+            Language::Ukrainian => format!("📂 Робоча директорія: {}", path),
+            Language::Russian => format!("📂 Рабочая директория: {}", path),
+            Language::Chinese => format!("📂 工作目录: {}", path),
+        }
+    }
+    
+    /// Format Windows version string based on selected language
+    pub fn get_windows_version(&self, info: &str) -> String {
+        match self.language {
+            Language::English => format!("🖥️ Windows Version: {}", info),
+            Language::Ukrainian => format!("🖥️ Версія Windows: {}", info),
+            Language::Russian => format!("🖥️ Версія Windows: {}", info),
+            Language::Chinese => format!("🖥️ Windows 版本: {}", info),
+        }
+    }
+    
+    /// Format CPU information string based on selected language
+    pub fn get_cpu(&self, cpu: &str) -> String {
+        match self.language {
+            Language::English => format!("💻 CPU: {}", cpu),
+            Language::Ukrainian => format!("💻 Процесор: {}", cpu),
+            Language::Russian => format!("💻 Процессор: {}", cpu),
+            Language::Chinese => format!("💻 CPU: {}", cpu),
+        }
+    }
+    
+    /// Format range information based on selected language
+    pub fn get_range(&self, low: f64, high: f64) -> String {
+        match self.language {
+            Language::English => format!("Range: [{:.4}, {:.4}] ms", low, high),
+            Language::Ukrainian => format!("Діапазон: [{:.4}, {:.4}] мс", low, high),
+            Language::Russian => format!("Диапазон: [{:.4}, {:.4}] мс", low, high),
+            Language::Chinese => format!("范围: [{:.4}, {:.4}] 毫秒", low, high),
+        }
+    }
+    
+    /// Format current best value information based on selected language
+    pub fn get_current_best(&self, value: f64, score: f64) -> String {
+        match self.language {
+            Language::English => format!("Current best: {:.4} ms (score={:.4})", value, score),
+            Language::Ukrainian => format!("Поточний найкращий: {:.4} мс (оцінка={:.4})", value, score),
+            Language::Russian => format!("Текущий лучший: {:.4} мс (оценка={:.4})", value, score),
+            Language::Chinese => format!("当前最佳: {:.4} 毫秒 (分数={:.4})", value, score),
+        }
+    }
+    
+    /// Format optimal value recommendation based on selected language
+    pub fn get_optimal_value(&self, value: f64) -> String {
+        match self.language {
+            Language::English => format!("✅ RECOMMENDED VALUE: {:.4} ms", value),
+            Language::Ukrainian => format!("✅ РЕКОМЕНДОВАНЕ ЗНАЧЕННЯ: {:.4} мс", value),
+            Language::Russian => format!("✅ РЕКОМЕНДУЕМОЕ ЗНАЧЕНИЕ: {:.4} мс", value),
+            Language::Chinese => format!("✅ 推荐值: {:.4} 毫秒", value),
+        }
+    }
+    
+    /// Format optimal recommendation command based on selected language
+    pub fn get_optimal_recommendation(&self, resolution: i32) -> String {
+        match self.language {
+            Language::English => format!("SetTimerResolution.exe --resolution {} --no-console", resolution),
+            Language::Ukrainian => format!("SetTimerResolution.exe --resolution {} --no-console", resolution),
+            Language::Russian => format!("SetTimerResolution.exe --resolution {} --no-console", resolution),
+            Language::Chinese => format!("SetTimerResolution.exe --resolution {} --no-console", resolution),
+        }
+    }
+    
+    /// Format rank information based on selected language
+    pub fn get_rank(&self, rank: usize) -> String {
+        match self.language {
+            Language::English => format!("Rank {}", rank),
+            Language::Ukrainian => format!("Рейтинг {}", rank),
+            Language::Russian => format!("Рейтинг {}", rank),
+            Language::Chinese => format!("排名 {}", rank),
+        }
+    }
+    
+    /// Format iterations with kappa information based on selected language
+    pub fn get_iterations_with_kappa(&self, iteration: usize, value: f64, kappa: f64) -> String {
+        match self.language {
+            Language::English => format!("🎯 Iteration {}: {:.4} ms (kappa={:.2})", iteration, value, kappa),
+            Language::Ukrainian => format!("🎯 Ітерація {}: {:.4} мс (kappa={:.2})", iteration, value, kappa),
+            Language::Russian => format!("🎯 Итерация {}: {:.4} мс (kappa={:.2})", iteration, value, kappa),
+            Language::Chinese => format!("🎯 迭代 {}: {:.4} 毫秒 (kappa={:.2})", iteration, value, kappa),
+        }
+    }
+    
+    /// Format phase 1 information based on selected language
+    pub fn get_phase1(&self, count: usize) -> String {
+        match self.language {
+            Language::English => format!("🔬 Phase 1: Initialization ({} points)", count),
+            Language::Ukrainian => format!("🔬 Фаза 1: Ініціалізація ({} точки)", count),
+            Language::Russian => format!("🔬 Фаза 1: Инициализация ({} точки)", count),
+            Language::Chinese => format!("🔬 阶段 1: 初始化 ({} 点)", count),
+        }
+    }
+    
+    /// Format point information based on selected language
+    pub fn get_point_info(&self, current: usize, total: usize, resolution: f64) -> String {
+        match self.language {
+            Language::English => format!("  📍 {}/{}: {:.4} ms", current, total, resolution),
+            Language::Ukrainian => format!("  📍 {}/{}: {:.4} мс", current, total, resolution),
+            Language::Russian => format!("  📍 {}/{}: {:.4} ms", current, total, resolution),
+            Language::Chinese => format!("  📍 {}/{}: {:.4} 毫秒", current, total, resolution),
+        }
+    }
+    
+    /// Format measurement information with runs and samples based on selected language
+    pub fn get_measurement_with_runs(&self, resolution: f64, runs: usize, samples: i32) -> String {
+        match self.language {
+            Language::English => format!("    🔬 Measurement {:.4} ms ({} runs × {} samples)...", resolution, runs, samples),
+            Language::Ukrainian => format!("    🔬 Вимірювання {:.4} мс ({} запусків × {} вибірок)...", resolution, runs, samples),
+            Language::Russian => format!("    🔬 Измерение {:.4} ms ({} прогонов × {} выборок)...", resolution, runs, samples),
+            Language::Chinese => format!("    🔬 测量 {:.4} 毫秒 ({} 次运行 × {} 样本)...", resolution, runs, samples),
+        }
+    }
+    
+    /// Format measurement statistics based on selected language
+    pub fn get_measurement_stats(&self, mean: f64, p95: f64, mad: f64, outliers: usize) -> String {
+        match self.language {
+            Language::English => format!("       μ={:.4} ms, p95={:.4} ms, MAD={:.4} ms, outliers={}", mean, p95, mad, outliers),
+            Language::Ukrainian => format!("       μ={:.4} мс, p95={:.4} мс, MAD={:.4} мс, викидів={}", mean, p95, mad, outliers),
+            Language::Russian => format!("       μ={:.4} ms, p95={:.4} ms, MAD={:.4} ms, выбросов={}", mean, p95, mad, outliers),
+            Language::Chinese => format!("       μ={:.4} 毫秒, p95={:.4} 毫秒, MAD={:.4} 毫秒, 异常值={}", mean, p95, mad, outliers),
+        }
+    }
+    
+    /// Format MeasureSleep.exe error message based on selected language
+    pub fn get_measure_sleep_error(&self, error: &str) -> String {
+        match self.language {
+            Language::English => format!("    ❌ Error running MeasureSleep.exe: {}", error),
+            Language::Ukrainian => format!("    ❌ Помилка запуску MeasureSleep.exe: {}", error),
+            Language::Russian => format!("    ❌ Ошибка запуска MeasureSleep.exe: {}", error),
+            Language::Chinese => format!("    ❌ 运行 MeasureSleep.exe 错误: {}", error),
+        }
+    }
+    
+    /// Format join error message based on selected language
+    pub fn get_join_error(&self, error: &str) -> String {
+        match self.language {
+            Language::English => format!("    ❌ Join error: {}", error),
+            Language::Ukrainian => format!("    ❌ Помилка приєднання: {}", error),
+            Language::Russian => format!("    ❌ Ошибка join: {}", error),
+            Language::Chinese => format!("    ❌ Join 错误: {}", error),
+        }
+    }
+    
+    /// Format timeout error message based on selected language
+    pub fn get_timeout_error(&self) -> String {
+        match self.language {
+            Language::English => "    ❌ MeasureSleep.exe timeout (>30s)".to_string(),
+            Language::Ukrainian => "    ❌ Тайм-аут MeasureSleep.exe (>30с)".to_string(),
+            Language::Russian => "    ❌ Таймаут MeasureSleep.exe (>30с)".to_string(),
+            Language::Chinese => "    ❌ MeasureSleep.exe 超时 (>30秒)".to_string(),
+        }
+    }
+    
+    /// Format keep current indicator based on selected language
+    pub fn get_keep_current(&self) -> String {
+        match self.language {
+            Language::English => " (current)".to_string(),
+            Language::Ukrainian => " (поточне)".to_string(),
+            Language::Russian => " (текущее)".to_string(),
+            Language::Chinese => " (当前)".to_string(),
+        }
+    }
+    
+    /// Format enter new value prompt based on selected language
+    pub fn get_enter_new_value(&self) -> String {
+        match self.language {
+            Language::English => "Enter new value: ".to_string(),
+            Language::Ukrainian => "Введіть нове значення: ".to_string(),
+            Language::Russian => "Введите новое значение: ".to_string(),
+            Language::Chinese => "输入新值: ".to_string(),
+        }
+    }
+    
+    /// Format exit prompt based on selected language
+    pub fn get_exit_prompt(&self) -> String {
+        match self.language {
+            Language::English => "Press Enter to exit...".to_string(),
+            Language::Ukrainian => "Натисніть Enter для виходу...".to_string(),
+            Language::Russian => "Нажмите Enter для выхода...".to_string(),
+            Language::Chinese => "按 Enter 退出...".to_string(),
+        }
+    }
+}
+
+/// Language selection function that allows users to choose their preferred language
+pub fn select_language() -> Language {
+    use std::io::{self, Write};
+    use crate::ui::language::Language;
+    
+    println!("\n🌐 Select Language / Виберіть мову / Выберите язык / 选择语言");
+    println!("━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━");
+    
+    let languages = Language::all();
+    for (i, lang) in languages.iter().enumerate() {
+        println!("{}. {}", i + 1, lang.name());
+    }
+    
+    print!("\nSelect language (1-{}): ", languages.len());
+    io::stdout().flush().unwrap();
+    
+    let mut input = String::new();
+    io::stdin().read_line(&mut input).unwrap();
+    
+    let choice = input.trim().parse::<usize>().unwrap_or(1);
+    let index = choice.saturating_sub(1).min(languages.len() - 1);
+    
+    languages[index]
+}

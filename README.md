@@ -1,9 +1,22 @@
-# TimerResBenchmark
+# EnhancedTimerResBenchmark
 
 <p align="center"><b>A Rust-based tool for benchmarking system timer resolution to achieve precise sleep intervals, optimizing performance and consistency for high-performance tasks like gaming, especially in low-latency scenarios. It automatically detects HPET status and identifies the optimal timer resolution for your system.</b></p>
 
 ![image](https://github.com/user-attachments/assets/72b39d18-94a8-4312-b7ac-d86f773520ce)
 
+
+---
+
+## 🌍 International Accessibility & Localization
+
+EnhancedTimerResBenchmark is fully internationalized with complete localization support in 4 languages:
+
+- 🇺🇸 **English** - Complete UI and documentation
+- 🇷🇺 **Russian** - Полная локализация интерфейса и документации
+- 🇺🇦 **Ukrainian** - Повна локалізація інтерфейсу та документації
+- 🇨🇳 **Chinese** - 完整的界面和文档本地化
+
+All source code comments are written in English to facilitate international collaboration and contribution.
 
 ---
 
@@ -18,6 +31,8 @@
   ![image](https://github.com/user-attachments/assets/c6cac925-f872-4ae7-b355-e203ce1996af)
 
 - **Rewritten in Rust** for better performance and less overhead.
+- **Windows 10 2004+ and Windows 11 support** with global timer resolution using NtSetTimerResolution
+- **Complete Internationalization** - Full localization in English, Russian, Ukrainian, and Chinese
 - GUI (under development)
 - Graph (under development)
 
@@ -25,8 +40,8 @@
 
 ## Installation and Usage
 
-1. **Disable HPET** and set up an **Idle-disabled power plan** (follow the [Troubleshooting](https://github.com/SwiftyPop/TimerResBenchmark/tree/main?tab=readme-ov-file#troubleshooting) guide for help).
-2. Download the latest release from [GitHub Releases](https://github.com/SwiftyPop/TimerResBenchmark/releases).
+1. **Disable HPET** and set up an **Idle-disabled power plan** (follow the [Troubleshooting](https://github.com/SwiftyPop/EnhancedTimerResBenchmark/tree/main?tab=readme-ov-file#troubleshooting) guide for help).
+2. Download the latest release from [GitHub Releases](https://github.com/SwiftyPop/EnhancedTimerResBenchmark/releases).
 3. Extract the `.7z` archive.
 4. Run `timer_res_benchmark.exe` as an administrator.
    - You can adjust the benchmark parameters directly in the program or modify them manually in the 'appsettings.json' file(default value).
@@ -48,9 +63,28 @@ C:\PATH\TO\SetTimerResolution.exe --no-console --resolution 5000
 1. Visit [Plotly Chart Studio](https://chart-studio.plotly.com/create/#/).
 2. Click **"Import"** at the top right and upload the `results.txt` file.
 3. Add a trace and configure the settings as shown below:
-   ![Plotly Configuration](https://github.com/SwiftyPop/TimerResBenchmark/assets/90952326/9f08eb09-7e1a-41f5-819e-10bd41444cd9)
+   ![Plotly Configuration](https://github.com/SwiftyPop/EnhancedTimerResBenchmark/assets/90952326/9f08eb09-7e1a-41f5-819e-10bd41444cd9)
 4. Look for the lowest `Sleep(1) Delta` on the y-axis. This represents the most precise and consistent 1ms sleep delays.
    - Example: If the lowest delta is at 0.5024ms, this is your optimal timer resolution.
+
+---
+
+## Windows 10 2004+ and Windows 11: Critical Changes
+
+**Important information for Windows 10 version 2004+ and Windows 11:**
+
+- `timeBeginPeriod()` is now **per-process** (not global)
+- Each process has its own timer resolution
+- `SetTimerResolution.exe` affects **only its own process**
+- **Windows 11**: minimized windows may lose high resolution
+
+**Problem**: `MeasureSleep.exe` runs as a **separate process** and **cannot see** the resolution set by `SetTimerResolution.exe`
+
+**Solution**: EnhancedTimerResBenchmark now uses `NtSetTimerResolution` for **global timer resolution** (works on Windows 11)
+
+The tool now uses low-level Windows API `NtSetTimerResolution` that sets the timer resolution globally for the entire system, ensuring both the benchmark process and MeasureSleep.exe see the same resolution setting.
+
+**Enhanced Internationalization**: All critical messages and error handling for these Windows changes are fully localized in English, Russian, Ukrainian, and Chinese languages, ensuring users worldwide can understand and troubleshoot any issues related to Windows 10 2004+ and Windows 11 timer resolution behaviors.
 
 ---
 
@@ -82,12 +116,16 @@ C:\PATH\TO\SetTimerResolution.exe --no-console --resolution 5000
 
 ---
 
-## Why Use TimerResBenchmark?
+## Why Use EnhancedTimerResBenchmark?
+
 - Disables HPET and uses more stable timers (e.g., TSC at 3.32MHz) for better frame rate consistency and lower latency.
 - Unlike the original PowerShell-based benchmark, this tool is now a native executable written in Rust, making it faster and easier to use.
+- **Worldwide Accessibility**: Fully localized in 4 languages (English, Russian, Ukrainian, Chinese) with all source code comments in English for international collaboration.
+- **Professional Development Standards**: Modular architecture with clean separation of concerns follows Rust community best practices.
+- **Comprehensive Documentation**: Extensive inline documentation and complete CHANGELOG for transparency and maintainability.
 - This tool was initially rewritten from C# to Rust as part of a learning project. Contributions and feedback are always welcome!
 
 ---
 
 ## License
-This project is licensed under the **MIT License**. See the [LICENSE](https://github.com/SwiftyPop/TimerResBenchmark/blob/master/LICENSE) file for details.
+This project is licensed under the **MIT License**. See the [LICENSE](https://github.com/SwiftyPop/EnhancedTimerResBenchmark/blob/master/LICENSE) file for details.
