@@ -1030,12 +1030,52 @@ async fn linear_exhaustive_search(
     println!("━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━");
     let mut current = params.start_value;
     let total_points = ((params.end_value - params.start_value) / params.increment_value).ceil() as usize;
-    println!("📊 Параметры:");
-    println!("   Диапазон: [{:.4}, {:.4}] ms", params.start_value, params.end_value);
-    println!("   Шаг: {:.4} ms", params.increment_value);
-    println!("   Точек для проверки: {}", total_points);
-    println!("   Прогонов на точку: 3");
-    println!("   Выборок на прогон: {}", params.sample_value);
+    println!("{}", localization.get(LocalizationKey::LinearMethodParameters));
+    
+    // Format range message based on selected language
+    let range_message = match localization.language {
+        crate::ui::language::Language::English => format!("   Range: [{:.4}, {:.4}] ms", params.start_value, params.end_value),
+        crate::ui::language::Language::Russian => format!("   Диапазон: [{:.4}, {:.4}] ms", params.start_value, params.end_value),
+        crate::ui::language::Language::Ukrainian => format!("   Діапазон: [{:.4}, {:.4}] ms", params.start_value, params.end_value),
+        crate::ui::language::Language::Chinese => format!("   范围: [{:.4}, {:.4}] ms", params.start_value, params.end_value),
+    };
+    println!("{}", range_message);
+    
+    // Format step message
+    let step_message = match localization.language {
+        crate::ui::language::Language::English => format!("   Step: {:.4} ms", params.increment_value),
+        crate::ui::language::Language::Russian => format!("   Шаг: {:.4} ms", params.increment_value),
+        crate::ui::language::Language::Ukrainian => format!("   Крок: {:.4} ms", params.increment_value),
+        crate::ui::language::Language::Chinese => format!("   步长: {:.4} ms", params.increment_value),
+    };
+    println!("{}", step_message);
+    
+    // Format points message
+    let points_message = match localization.language {
+        crate::ui::language::Language::English => format!("   Points to check: {}", total_points),
+        crate::ui::language::Language::Russian => format!("   Точек для проверки: {}", total_points),
+        crate::ui::language::Language::Ukrainian => format!("   Точок для перевірки: {}", total_points),
+        crate::ui::language::Language::Chinese => format!("   待检查点数: {}", total_points),
+    };
+    println!("{}", points_message);
+    
+    // Format runs message
+    let runs_message = match localization.language {
+        crate::ui::language::Language::English => "   Runs per point: 3",
+        crate::ui::language::Language::Russian => "   Прогонов на точку: 3",
+        crate::ui::language::Language::Ukrainian => "   Прогонів на точку: 3",
+        crate::ui::language::Language::Chinese => "   每点运行次数: 3",
+    };
+    println!("{}", runs_message);
+    
+    // Format samples message
+    let samples_message = match localization.language {
+        crate::ui::language::Language::English => format!("   Samples per run: {}", params.sample_value),
+        crate::ui::language::Language::Russian => format!("   Выборок на прогон: {}", params.sample_value),
+        crate::ui::language::Language::Ukrainian => format!("   Вибірок на прогін: {}", params.sample_value),
+        crate::ui::language::Language::Chinese => format!("   每次运行样本数: {}", params.sample_value),
+    };
+    println!("{}", samples_message);
     println!();
     
     let estimated_time = (total_points as f64 * 6.5) / 60.0;
