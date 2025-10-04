@@ -1,5 +1,5 @@
-﻿//! Localization module for multilingual support
-//!
+//! Localization module for multilingual support
+//! 
 //! This module provides internationalization support for all UI elements
 //! in the timer resolution benchmark tool.
 
@@ -26,195 +26,281 @@ impl Localization {
             Language::Chinese => key.get_chinese(),
         }
     }
-    
-    /// Format working directory string based on selected language
+
     pub fn get_working_dir(&self, path: &str) -> String {
-        match self.language {
-            Language::English => format!("рџ“‚ Working Directory: {}", path),
-            Language::Ukrainian => format!("рџ“‚ Р РѕР±РѕС‡Р° РґРёСЂРµРєС‚РѕСЂС–СЏ: {}", path),
-            Language::Russian => format!("рџ“‚ Р Р°Р±РѕС‡Р°СЏ РґРёСЂРµРєС‚РѕСЂРёСЏ: {}", path),
-            Language::Chinese => format!("рџ“‚ е·ҐдЅњз›®еЅ•: {}", path),
-        }
+        self.get(LocalizationKey::WorkingDir).replace("{}", path)
     }
-    
-    /// Format Windows version string based on selected language
+
     pub fn get_windows_version(&self, info: &str) -> String {
-        match self.language {
-            Language::English => format!("рџ–ҐпёЏ Windows Version: {}", info),
-            Language::Ukrainian => format!("рџ–ҐпёЏ Р’РµСЂСЃС–СЏ Windows: {}", info),
-            Language::Russian => format!("рџ–ҐпёЏ Р’РµСЂСЃС–СЏ Windows: {}", info),
-            Language::Chinese => format!("рџ–ҐпёЏ Windows з‰€жњ¬: {}", info),
-        }
+        self.get(LocalizationKey::WindowsVersion).replace("{}", info)
     }
-    
-    /// Format CPU information string based on selected language
+
     pub fn get_cpu(&self, cpu: &str) -> String {
-        match self.language {
-            Language::English => format!("рџ’» CPU: {}", cpu),
-            Language::Ukrainian => format!("рџ’» РџСЂРѕС†РµСЃРѕСЂ: {}", cpu),
-            Language::Russian => format!("рџ’» РџСЂРѕС†РµСЃСЃРѕСЂ: {}", cpu),
-            Language::Chinese => format!("рџ’» CPU: {}", cpu),
-        }
+        self.get(LocalizationKey::Cpu).replace("{}", cpu)
     }
-    
-    /// Format range information based on selected language
+
     pub fn get_range(&self, low: f64, high: f64) -> String {
-        match self.language {
-            Language::English => format!("Range: [{:.4}, {:.4}] ms", low, high),
-            Language::Ukrainian => format!("Р”С–Р°РїР°Р·РѕРЅ: [{:.4}, {:.4}] РјСЃ", low, high),
-            Language::Russian => format!("Р”РёР°РїР°Р·РѕРЅ: [{:.4}, {:.4}] РјСЃ", low, high),
-            Language::Chinese => format!("иЊѓе›ґ: [{:.4}, {:.4}] жЇ«з§’", low, high),
-        }
+        self.get(LocalizationKey::Range)
+            .replace("{:.4}", &format!("{:.4}", low))
+            .replace("{:.4}", &format!("{:.4}", high))
     }
     
-    /// Format current best value information based on selected language
     pub fn get_current_best(&self, value: f64, score: f64) -> String {
-        match self.language {
-            Language::English => format!("Current best: {:.4} ms (score={:.4})", value, score),
-            Language::Ukrainian => format!("РџРѕС‚РѕС‡РЅРёР№ РЅР°Р№РєСЂР°С‰РёР№: {:.4} РјСЃ (РѕС†С–РЅРєР°={:.4})", value, score),
-            Language::Russian => format!("РўРµРєСѓС‰РёР№ Р»СѓС‡С€РёР№: {:.4} РјСЃ (РѕС†РµРЅРєР°={:.4})", value, score),
-            Language::Chinese => format!("еЅ“е‰ЌжњЂдЅі: {:.4} жЇ«з§’ (е€†ж•°={:.4})", value, score),
-        }
+        self.get(LocalizationKey::CurrentBest)
+            .replace("{:.4}", &format!("{:.4}", value))
+            .replace("{:.4}", &format!("{:.4}", score))
     }
-    
-    /// Format optimal value recommendation based on selected language
+
     pub fn get_optimal_value(&self, value: f64) -> String {
-        match self.language {
-            Language::English => format!("вњ… RECOMMENDED VALUE: {:.4} ms", value),
-            Language::Ukrainian => format!("вњ… Р Р•РљРћРњР•РќР”РћР’РђРќР• Р—РќРђР§Р•РќРќРЇ: {:.4} РјСЃ", value),
-            Language::Russian => format!("вњ… Р Р•РљРћРњР•РќР”РЈР•РњРћР• Р—РќРђР§Р•РќРР•: {:.4} РјСЃ", value),
-            Language::Chinese => format!("вњ… жЋЁиЌђеЂј: {:.4} жЇ«з§’", value),
-        }
+        self.get(LocalizationKey::OptimalValue).replace("{:.4}", &format!("{:.4}", value))
     }
-    
-    /// Format optimal recommendation command based on selected language
+
     pub fn get_optimal_recommendation(&self, resolution: i32) -> String {
-        match self.language {
-            Language::English => format!("SetTimerResolution.exe --resolution {} --no-console", resolution),
-            Language::Ukrainian => format!("SetTimerResolution.exe --resolution {} --no-console", resolution),
-            Language::Russian => format!("SetTimerResolution.exe --resolution {} --no-console", resolution),
-            Language::Chinese => format!("SetTimerResolution.exe --resolution {} --no-console", resolution),
-        }
+        self.get(LocalizationKey::OptimalRecommendation).replace("{}", &resolution.to_string())
     }
-    
-    /// Format rank information based on selected language
+
     pub fn get_rank(&self, rank: usize) -> String {
-        match self.language {
-            Language::English => format!("Rank {}", rank),
-            Language::Ukrainian => format!("Р РµР№С‚РёРЅРі {}", rank),
-            Language::Russian => format!("Р РµР№С‚РёРЅРі {}", rank),
-            Language::Chinese => format!("жЋ’еђЌ {}", rank),
-        }
+        self.get(LocalizationKey::Rank).replace("{}", &rank.to_string())
     }
-    
-    /// Format iterations with kappa information based on selected language
-    pub fn get_iterations_with_kappa(&self, iteration: usize, value: f64, kappa: f64) -> String {
-        match self.language {
-            Language::English => format!("рџЋЇ Iteration {}: {:.4} ms (kappa={:.2})", iteration, value, kappa),
-            Language::Ukrainian => format!("рџЋЇ Р†С‚РµСЂР°С†С–СЏ {}: {:.4} РјСЃ (kappa={:.2})", iteration, value, kappa),
-            Language::Russian => format!("рџЋЇ РС‚РµСЂР°С†РёСЏ {}: {:.4} РјСЃ (kappa={:.2})", iteration, value, kappa),
-            Language::Chinese => format!("рџЋЇ иї­д»Ј {}: {:.4} жЇ«з§’ (kappa={:.2})", iteration, value, kappa),
-        }
+
+    pub fn get_iterations_with_kappa(&self, iteration: usize, max_iterations: usize, value: f64, kappa: f64) -> String {
+        self.get(LocalizationKey::IterationsWithKappa)
+            .replace("{}", &iteration.to_string())
+            .replace("{}", &max_iterations.to_string())
+            .replace("{:.4}", &format!("{:.4}", value))
+            .replace("{:.2}", &format!("{:.2}", kappa))
     }
-    
-    /// Format phase 1 information based on selected language
+
     pub fn get_phase1(&self, count: usize) -> String {
-        match self.language {
-            Language::English => format!("[INIT] Phase 1: Initialization ({} points)", count),
-            Language::Ukrainian => format!("[INIT] Р¤Р°Р·Р° 1: Р†РЅС–С†С–Р°Р»С–Р·Р°С†С–СЏ ({} С‚РѕС‡РєРё)", count),
-            Language::Russian => format!("[INIT] Р¤Р°Р·Р° 1: РРЅРёС†РёР°Р»РёР·Р°С†РёСЏ ({} С‚РѕС‡РєРё)", count),
-            Language::Chinese => format!("[INIT] й¶ж®µ 1: е€ќе§‹еЊ– ({} з‚№)", count),
-        }
+        self.get(LocalizationKey::Phase1).replace("{}", &count.to_string())
     }
-    
-    /// Format point information based on selected language
+
     pub fn get_point_info(&self, current: usize, total: usize, resolution: f64) -> String {
-        match self.language {
-            Language::English => format!("  [POINT] {}/{}: {:.4} ms", current, total, resolution),
-            Language::Ukrainian => format!("  [POINT] {}/{}: {:.4} РјСЃ", current, total, resolution),
-            Language::Russian => format!("  [POINT] {}/{}: {:.4} ms", current, total, resolution),
-            Language::Chinese => format!("  [POINT] {}/{}: {:.4} жЇ«з§’", current, total, resolution),
-        }
+        self.get(LocalizationKey::PointInfo)
+            .replace("{}", &current.to_string())
+            .replace("{}", &total.to_string())
+            .replace("{:.4}", &format!("{:.4}", resolution))
     }
-    
-    /// Format measurement information with runs and samples based on selected language
+
     pub fn get_measurement_with_runs(&self, resolution: f64, runs: usize, samples: i32) -> String {
-        match self.language {
-            Language::English => format!("    [TEST] Measurement {:.4} ms ({} runs x {} samples)...", resolution, runs, samples),
-            Language::Ukrainian => format!("    [TEST] Р’РёРјС–СЂСЋРІР°РЅРЅСЏ {:.4} РјСЃ ({} Р·Р°РїСѓСЃРєС–РІ x {} РІРёР±С–СЂРѕРє)...", resolution, runs, samples),
-            Language::Russian => format!("    [TEST] РР·РјРµСЂРµРЅРёРµ {:.4} ms ({} РїСЂРѕРіРѕРЅРѕРІ x {} РІС‹Р±РѕСЂРѕРє)...", resolution, runs, samples),
-            Language::Chinese => format!("    [TEST] жµ‹й‡Џ {:.4} жЇ«з§’ ({} ж¬ЎиїђиЎЊ x {} ж ·жњ¬)...", resolution, runs, samples),
-        }
+        self.get(LocalizationKey::GetMeasurementWithRuns)
+            .replace("{:.4}", &format!("{:.4}", resolution))
+            .replace("{}", &runs.to_string())
+            .replace("{}", &samples.to_string())
     }
-    
-    /// Format measurement statistics based on selected language
+
     pub fn get_measurement_stats(&self, mean: f64, p95: f64, mad: f64, outliers: usize) -> String {
-        match self.language {
-            Language::English => format!("       mean={:.4} ms, p95={:.4} ms, MAD={:.4} ms, outliers={}", mean, p95, mad, outliers),
-            Language::Ukrainian => format!("       середнє={:.4} мс, p95={:.4} мс, MAD={:.4} мс, викидів={}", mean, p95, mad, outliers),
-            Language::Russian => format!("       среднее={:.4} ms, p95={:.4} ms, MAD={:.4} ms, выбросов={}", mean, p95, mad, outliers),
-            Language::Chinese => format!("       平均={:.4} 毫秒, p95={:.4} 毫秒, MAD={:.4} 毫秒, 异常值={}", mean, p95, mad, outliers),
-        }
+        self.get(LocalizationKey::GetMeasurementStats)
+            .replace("{:.4}", &format!("{:.4}", mean))
+            .replace("{:.4}", &format!("{:.4}", p95))
+            .replace("{:.4}", &format!("{:.4}", mad))
+            .replace("{}", &outliers.to_string())
     }
-    
-    /// Format MeasureSleep.exe error message based on selected language
+
     pub fn get_measure_sleep_error(&self, error: &str) -> String {
-        match self.language {
-            Language::English => format!("    вќЊ Error running MeasureSleep.exe: {}", error),
-            Language::Ukrainian => format!("    вќЊ РџРѕРјРёР»РєР° Р·Р°РїСѓСЃРєСѓ MeasureSleep.exe: {}", error),
-            Language::Russian => format!("    вќЊ РћС€РёР±РєР° Р·Р°РїСѓСЃРєР° MeasureSleep.exe: {}", error),
-            Language::Chinese => format!("    вќЊ иїђиЎЊ MeasureSleep.exe й”™иЇЇ: {}", error),
-        }
+        self.get(LocalizationKey::MeasureSleepError).replace("{}", error)
     }
-    
-    /// Format join error message based on selected language
+
     pub fn get_join_error(&self, error: &str) -> String {
-        match self.language {
-            Language::English => format!("    вќЊ Join error: {}", error),
-            Language::Ukrainian => format!("    вќЊ РџРѕРјРёР»РєР° РїСЂРёС”РґРЅР°РЅРЅСЏ: {}", error),
-            Language::Russian => format!("    вќЊ РћС€РёР±РєР° join: {}", error),
-            Language::Chinese => format!("    вќЊ Join й”™иЇЇ: {}", error),
-        }
+        self.get(LocalizationKey::JoinError).replace("{}", error)
+    }
+
+    pub fn get_timeout_error(&self) -> &'static str {
+        self.get(LocalizationKey::TimeoutError)
+    }
+
+    pub fn get_keep_current(&self) -> &'static str {
+        self.get(LocalizationKey::KeepCurrent)
+    }
+
+    pub fn get_enter_new_value(&self) -> &'static str {
+        self.get(LocalizationKey::EnterNewValue)
+    }
+
+    pub fn get_exit_prompt(&self) -> &'static str {
+        self.get(LocalizationKey::GetExitPrompt)
+    }
+
+    // Add new formatting functions here
+    pub fn get_hpet_status_cached(&self, status: &str) -> String {
+        self.get(LocalizationKey::HpetStatusCached).replace("{}", status)
+    }
+
+    pub fn get_hpet_status(&self, status: &str) -> String {
+        self.get(LocalizationKey::HpetStatus).replace("{}", status)
+    }
+
+    pub fn get_error_hpet_disable(&self, error: &str) -> String {
+        self.get(LocalizationKey::ErrorHpetDisable).replace("{}", error)
     }
     
-    /// Format timeout error message based on selected language
-    pub fn get_timeout_error(&self) -> String {
-        match self.language {
-            Language::English => "    вќЊ MeasureSleep.exe timeout (>30s)".to_string(),
-            Language::Ukrainian => "    вќЊ РўР°Р№Рј-Р°СѓС‚ MeasureSleep.exe (>30СЃ)".to_string(),
-            Language::Russian => "    вќЊ РўР°Р№РјР°СѓС‚ MeasureSleep.exe (>30СЃ)".to_string(),
-            Language::Chinese => "    вќЊ MeasureSleep.exe и¶…ж—¶ (>30з§’)".to_string(),
-        }
+    pub fn get_error_save_parameters(&self, error: &str) -> String {
+        self.get(LocalizationKey::ErrorSaveParameters).replace("{}", error)
     }
-    
-    /// Format keep current indicator based on selected language
-    pub fn get_keep_current(&self) -> String {
-        match self.language {
-            Language::English => " (current)".to_string(),
-            Language::Ukrainian => " (РїРѕС‚РѕС‡РЅРµ)".to_string(),
-            Language::Russian => " (С‚РµРєСѓС‰РµРµ)".to_string(),
-            Language::Chinese => " (еЅ“е‰Ќ)".to_string(),
-        }
+
+    pub fn get_error_configuration(&self, error: &str) -> String {
+        self.get(LocalizationKey::ErrorConfiguration).replace("{}", error)
     }
-    
-    /// Format enter new value prompt based on selected language
-    pub fn get_enter_new_value(&self) -> String {
-        match self.language {
-            Language::English => "Enter new value: ".to_string(),
-            Language::Ukrainian => "Р’РІРµРґС–С‚СЊ РЅРѕРІРµ Р·РЅР°С‡РµРЅРЅСЏ: ".to_string(),
-            Language::Russian => "Р’РІРµРґРёС‚Рµ РЅРѕРІРѕРµ Р·РЅР°С‡РµРЅРёРµ: ".to_string(),
-            Language::Chinese => "иѕ“е…Ґж–°еЂј: ".to_string(),
-        }
+
+    pub fn get_found(&self, path: &str) -> String {
+        self.get(LocalizationKey::Found).replace("{}", path)
     }
-    
-    /// Format exit prompt based on selected language
-    pub fn get_exit_prompt(&self) -> String {
-        match self.language {
-            Language::English => "Press Enter to exit...".to_string(),
-            Language::Ukrainian => "РќР°С‚РёСЃРЅС–С‚СЊ Enter РґР»СЏ РІРёС…РѕРґСѓ...".to_string(),
-            Language::Russian => "РќР°Р¶РјРёС‚Рµ Enter РґР»СЏ РІС‹С…РѕРґР°...".to_string(),
-            Language::Chinese => "жЊ‰ Enter йЂЂе‡є...".to_string(),
-        }
+
+    pub fn get_missing_deps(&self, deps: &str) -> String {
+        self.get(LocalizationKey::MissingDeps).replace("{}", deps)
+    }
+
+    pub fn get_test_passed(&self, delta: f64, stdev: f64) -> String {
+        self.get(LocalizationKey::TestPassed)
+            .replace("{:.4}", &format!("{:.4}", delta))
+            .replace("{:.4}", &format!("{:.4}", stdev))
+    }
+
+    pub fn get_critical_process_remaining(&self, remaining: usize) -> String {
+        self.get(LocalizationKey::CriticalProcessRemaining).replace("{}", &remaining.to_string())
+    }
+
+    pub fn get_error_linear_search(&self, error: &str) -> String {
+        self.get(LocalizationKey::ErrorLinearSearch).replace("{}", error)
+    }
+
+    pub fn get_error_optimization(&self, error: &str) -> String {
+        self.get(LocalizationKey::ErrorOptimization).replace("{}", error)
+    }
+
+    pub fn get_warning_cleanup(&self, error: &str) -> String {
+        self.get(LocalizationKey::WarningCleanup).replace("{}", error)
+    }
+
+    pub fn get_kernel_width(&self, width: f64) -> String {
+        self.get(LocalizationKey::KernelWidth).replace("{:.4}", &format!("{:.4}", width))
+    }
+
+    pub fn get_initial_points(&self, points: &str) -> String {
+        self.get(LocalizationKey::InitialPoints).replace("{:?}", points)
+    }
+
+    pub fn get_init_point_message(&self, point: f64) -> String {
+        self.get(LocalizationKey::InitPointMessage).replace("{:.4}", &format!("{:.4}", point))
+    }
+
+    pub fn get_unique_points(&self, unique: usize, total: usize) -> String {
+        self.get(LocalizationKey::UniquePoints)
+            .replace("{}", &unique.to_string())
+            .replace("{}", &total.to_string())
+    }
+
+    pub fn get_topsis_score(&self, score: f64) -> String {
+        self.get(LocalizationKey::TopsisScore).replace("{:.4}", &format!("{:.4}", score))
+    }
+
+    pub fn get_p95_delta(&self, delta: f64) -> String {
+        self.get(LocalizationKey::P95Delta).replace("{:.4}", &format!("{:.4}", delta))
+    }
+
+    pub fn get_mad(&self, mad: f64) -> String {
+        self.get(LocalizationKey::Mad).replace("{:.4}", &format!("{:.4}", mad))
+    }
+
+    pub fn get_p99_delta(&self, delta: f64) -> String {
+        self.get(LocalizationKey::P99Delta).replace("{:.4}", &format!("{:.4}", delta))
+    }
+
+    pub fn get_ci_width(&self, width: f64) -> String {
+        self.get(LocalizationKey::CiWidth).replace("{:.4}", &format!("{:.4}", width))
+    }
+
+    pub fn get_mutex_error_message(&self, message: &str) -> String {
+        self.get(LocalizationKey::MutexErrorMessage).replace("{}", message)
+    }
+
+    pub fn get_error_process_exited(&self, error: &str) -> String {
+        self.get(LocalizationKey::ErrorProcessExited).replace("{}", error)
+    }
+
+    pub fn get_warning_cannot_check_process(&self, error: &str) -> String {
+        self.get(LocalizationKey::WarningCannotCheckProcess).replace("{}", error)
+    }
+
+    pub fn get_critical_mismatch(&self, expected: f64, reported: f64) -> String {
+        self.get(LocalizationKey::CriticalMismatch)
+            .replace("{:.4}", &format!("{:.4}", expected))
+            .replace("{:.4}", &format!("{:.4}", reported))
+    }
+
+    pub fn get_verified(&self, reported: f64) -> String {
+        self.get(LocalizationKey::Verified).replace("{:.4}", &format!("{:.4}", reported))
+    }
+
+    pub fn get_output_preview(&self, preview: &str) -> String {
+        self.get(LocalizationKey::OutputPreview).replace("{}", preview)
+    }
+
+    pub fn get_warning_kill_child(&self, error: &str) -> String {
+        self.get(LocalizationKey::WarningKillChild).replace("{}", error)
+    }
+
+    pub fn get_points_checked(&self, count: usize) -> String {
+        self.get(LocalizationKey::PointsChecked).replace("{}", &count.to_string())
+    }
+
+    pub fn get_unique(&self, count: usize) -> String {
+        self.get(LocalizationKey::Unique).replace("{}", &count.to_string())
+    }
+
+    pub fn get_kill_warning_ps(&self, error: &str) -> String {
+        self.get(LocalizationKey::KillWarningPS).replace("{}", error)
+    }
+
+    pub fn get_kill_error_ps(&self, error: &str) -> String {
+        self.get(LocalizationKey::KillErrorPS).replace("{}", error)
+    }
+
+    pub fn get_kill_warning_taskkill(&self, error: &str) -> String {
+        self.get(LocalizationKey::KillWarningTaskkill).replace("{}", error)
+    }
+
+    pub fn get_kill_warning_remaining(&self, remaining: usize) -> String {
+        self.get(LocalizationKey::KillWarningRemaining).replace("{}", &remaining.to_string())
+    }
+
+    pub fn get_kill_error_remaining(&self, remaining: usize) -> String {
+        self.get(LocalizationKey::KillErrorRemaining).replace("{}", &remaining.to_string())
+    }
+
+    pub fn get_linear_method_samples(&self, value: i32) -> String {
+        self.get(LocalizationKey::LinearMethodSamples).replace("{}", &value.to_string())
+    }
+
+    pub fn get_iterations_linear(&self, iterations: i32) -> String {
+        self.get(LocalizationKey::IterationsLinear).replace("{}", &iterations.to_string())
+    }
+
+    pub fn get_runs_per_point(&self, runs: usize) -> String {
+        self.get(LocalizationKey::RunsPerPoint).replace("{}", &runs.to_string())
+    }
+
+    pub fn get_samples_per_run(&self, samples: i32) -> String {
+        self.get(LocalizationKey::SamplesPerRun).replace("{}", &samples.to_string())
+    }
+
+    pub fn get_weights(&self, accuracy: f64, consistency: f64, worst_case: f64) -> String {
+        self.get(LocalizationKey::Weights)
+            .replace("{:.1}", &format!("{:.1}", accuracy))
+            .replace("{:.1}", &format!("{:.1}", consistency))
+            .replace("{:.1}", &format!("{:.1}", worst_case))
+    }
+
+    pub fn get_expected(&self, value: f64) -> String {
+        self.get(LocalizationKey::Expected).replace("{:.4}", &format!("{:.4}", value))
+    }
+
+    pub fn get_reported(&self, value: f64) -> String {
+        self.get(LocalizationKey::Reported).replace("{:.4}", &format!("{:.4}", value))
+    }
+
+    pub fn get_diff(&self, value: f64) -> String {
+        self.get(LocalizationKey::Diff).replace("{:.4}", &format!("{:.4}", value))
     }
 }
 

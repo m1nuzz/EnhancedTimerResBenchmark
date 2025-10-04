@@ -106,29 +106,25 @@ lazy_static::lazy_static! {
     static ref HPET_STATUS: Mutex<Option<String>> = Mutex::new(None);
 }
 
-fn check_hpet_status() -> io::Result<()> {
+fn check_hpet_status(localization: &Localization) -> io::Result<()> {
     let mut status = HPET_STATUS.lock().unwrap();
 
-    // Use the cached status if available.
     if let Some(ref cached_status) = *status {
-        println!("HPET status (cached): {}", cached_status);
+        println!("{}", localization.get_hpet_status_cached(cached_status));
         return Ok(());
     }
 
-    // Run the bcdedit command to get the current boot configuration.
     let output = Command::new("bcdedit")
         .arg("/enum")
         .arg("{current}")
         .output()?;
 
     if !output.status.success() {
-        eprintln!("❌ Error: Failed to retrieve HPET status");
-        return Err(Error::new(ErrorKind::Other, "Failed to retrieve HPET status"));
+        eprintln!("{}", localization.get(LocalizationKey::ErrorHpetStatus));
+        return Err(Error::new(ErrorKind::Other, localization.get(LocalizationKey::ErrorHpetStatus)));
     }
 
     let output_str = String::from_utf8_lossy(&output.stdout);
-
-    // We'll capture the values for the two keys if they exist.
     let mut useplatformclock_value: Option<String> = None;
     let mut disabledynamictick_value: Option<String> = None;
 
@@ -136,83 +132,61 @@ fn check_hpet_status() -> io::Result<()> {
         let mut parts = line.split_whitespace();
         if let (Some(key), Some(value)) = (parts.next(), parts.next()) {
             match key.to_lowercase().as_str() {
-                "useplatformclock" => {
-                    useplatformclock_value = Some(value.to_lowercase());
-                }
-                "disabledynamictick" => {
-                    disabledynamictick_value = Some(value.to_lowercase());
-                }
+                "useplatformclock" => useplatformclock_value = Some(value.to_lowercase()),
+                "disabledynamictick" => disabledynamictick_value = Some(value.to_lowercase()),
                 _ => {}
             }
         }
     }
 
-    // Decide HPET status.
-    // According to the requirement, if "useplatformclock" is absent and "disabledynamictick" is "yes",
-    // then we consider HPET as disabled.
     let hpet_status = match (
         useplatformclock_value.as_deref(),
         disabledynamictick_value.as_deref(),
     ) {
-        // If "useplatformclock" is present and equals "no", and disabledynamictick is "yes" → disabled.
-        (Some("no"), Some("yes")) => "disabled",
-        // If "useplatformclock" is absent but disabledynamictick is "yes" → disabled.
-        (None, Some("yes")) => "disabled",
-        // If both keys are absent, default to disabled.
-        (None, None) => "disabled",
-        // In all other cases, consider HPET as enabled.
+        (Some("no"), Some("yes")) | (None, Some("yes")) | (None, None) => "disabled",
         _ => "enabled",
     };
 
-    println!("HPET status: {}", hpet_status);
+    println!("{}", localization.get_hpet_status(hpet_status));
 
-    // If HPET is enabled, notify the user and prompt to disable.
     if hpet_status == "enabled" {
-        println!("⚠️ HPET is enabled. For optimal results, it is recommended to disable HPET.");
-        println!("Please refer to the troubleshooting guide: https://github.com/SwiftyPop/TimerResBenchmark?tab=readme-ov-file#troubleshooting");
-        println!("Would you like to disable HPET now? (y/n): ");
+        println!("{}", localization.get(LocalizationKey::HpetEnabledWarning));
+        println!("{}", localization.get(LocalizationKey::HpetTroubleshooting));
+        print!("{}", localization.get(LocalizationKey::HpetDisablePrompt));
+        io::stdout().flush()?;
         let mut input = String::new();
         io::stdin().read_line(&mut input)?;
         if input.trim().eq_ignore_ascii_case("y") {
-            if let Err(e) = disable_hpet() {
-                eprintln!("❌ Error: Failed to disable HPET: {}", e);
+            if let Err(e) = disable_hpet(localization) {
+                eprintln!("{}", localization.get_error_hpet_disable(&e.to_string()));
                 return Err(e.into());
             }
-            println!("✅ HPET has been disabled. Please restart your computer for the changes to take effect.");
+            println!("{}", localization.get(LocalizationKey::HpetDisabledSuccess));
         }
     }
 
     *status = Some(hpet_status.to_string());
-
     Ok(())
 }
 
-fn disable_hpet() -> io::Result<()> {
-    let mut commands = vec![
-        {
-            let mut cmd = Command::new("bcdedit");
-            cmd.arg("/deletevalue").arg("useplatformclock");
-            cmd
-        },
-        {
-            let mut cmd = Command::new("bcdedit");
-            cmd.arg("/set").arg("disabledynamictick").arg("yes");
-            cmd
-        },
-    ];
-
-    if let Err(e) = apply_registry_tweak() {
-        eprintln!("❌ Error: Failed to apply registry tweak: {}", e);
+fn disable_hpet(localization: &Localization) -> io::Result<()> {
+    if let Err(e) = apply_registry_tweak(localization) {
+        eprintln!("{}", localization.get(LocalizationKey::ErrorRegistryTweak));
         return Err(e.into());
     }
 
-    for command in commands.iter_mut() {
-        let output = command.output()
-            .map_err(|e| io::Error::new(io::ErrorKind::Other, format!("Failed to disable HPET: {}", e)))?;
+    let commands = vec![
+        ("bcdedit", vec!["/deletevalue", "useplatformclock"]),
+        ("bcdedit", vec!["/set", "disabledynamictick", "yes"]),
+    ];
+
+    for (command, args) in commands {
+        let output = Command::new(command).args(&args).output()
+            .map_err(|e| io::Error::new(io::ErrorKind::Other, localization.get_error_hpet_disable(&e.to_string())))?;
         if !output.status.success() {
             return Err(io::Error::new(
                 io::ErrorKind::Other,
-                format!("Failed to disable HPET: {}", output.status),
+                format!("{} {}", localization.get(LocalizationKey::ErrorHpetDisable), output.status),
             ));
         }
     }
@@ -220,23 +194,25 @@ fn disable_hpet() -> io::Result<()> {
     Ok(())
 }
 
-fn apply_registry_tweak() -> io::Result<()> {
+fn apply_registry_tweak(localization: &Localization) -> io::Result<()> {
     let output = Command::new("reg")
-        .arg("add")
-        .arg(r"HKEY_LOCAL_MACHINE\SYSTEM\CurrentControlSet\Control\Session Manager\kernel")
-        .arg("/v")
-        .arg("GlobalTimerResolutionRequests")
-        .arg("/t")
-        .arg("REG_DWORD")
-        .arg("/d")
-        .arg("1")
-        .arg("/f")
+        .args(&[
+            "add",
+            r"HKEY_LOCAL_MACHINE\SYSTEM\CurrentControlSet\Control\Session Manager\kernel",
+            "/v",
+            "GlobalTimerResolutionRequests",
+            "/t",
+            "REG_DWORD",
+            "/d",
+            "1",
+            "/f",
+        ])
         .output()?;
 
     if !output.status.success() {
         return Err(Error::new(
             ErrorKind::Other,
-            "Failed to apply registry tweak",
+            localization.get(LocalizationKey::ErrorRegistryTweak),
         ));
     }
 
@@ -323,69 +299,49 @@ pub struct OptimizationResult {
 pub async fn run_benchmark() -> io::Result<()> {
     use colored::*;
 
-    // Language selection
     let selected_language = select_language();
     let localization = Localization::new(selected_language);
     
-    // Create a dynamic separator using '=' characters
     let separator = "=".repeat(60);
     
-    // Title Block
     println!("\n{}", separator);
     println!("{:^60}", localization.get(LocalizationKey::Title).bold().cyan());
     println!("{}\n", separator);
 
-    // Check admin privileges first - fail fast
     if !is_admin() {
-        eprintln!("{} {}", "❌ Error:".bold().red(), "Administrator privileges required!".bold().red());
-        eprintln!("   {}", "Please run this program as Administrator.".bold().red());
+        eprintln!("{}", localization.get(LocalizationKey::ErrorAdminPrivileges).bold().red());
+        eprintln!("{}", localization.get(LocalizationKey::RunAsAdmin).bold().red());
         return Err(Error::new(ErrorKind::PermissionDenied, "Administrator privileges required"));
     }
 
-    // System information block
     println!("{}", localization.get(LocalizationKey::SystemInfo).bold().yellow());
     println!("━━━━━━━━━━━━━━━━━━━");
     println!("{}", localization.get_working_dir(&env::current_dir()?.display().to_string()));
     println!("{}", localization.get(LocalizationKey::AdminPrivileges).bold().green());
 
-    // Display OS information
     let os_info = os_info::get();
-
-    // Check if the OS is Windows and display specific version information
     if let os_info::Type::Windows = os_info.os_type() {
         if let Some(build_number) = os_info.version().to_string().split('.').nth(2).and_then(|s| s.parse::<u32>().ok()) {
-            let version = if build_number >= 22000 {
-                "Windows 11"
-            } else {
-                "Windows 10"
-            };
+            let version = if build_number >= 22000 { "Windows 11" } else { "Windows 10" };
             println!("{}", localization.get_windows_version(&format!("{} (Build {})", version, build_number)));
         } else {
-            println!("{}", localization.get_windows_version("Unknown Build"));
+            println!("{}", localization.get_windows_version(localization.get(LocalizationKey::UnknownBuild)));
         }
     }
 
-    // Display CPU information
     let cpuid = raw_cpuid::CpuId::new();
-
-    // Get the CPU brand string
     if let Some(brand) = cpuid.get_processor_brand_string() {
         println!("{}", localization.get_cpu(brand.as_str().trim()));
     } else {
-        println!("{}", localization.get_cpu("Unknown"));
+        println!("{}", localization.get_cpu(localization.get(LocalizationKey::UnknownCpu)));
     }
-
     println!();
 
-    // HPET Configuration block
     println!("{}", localization.get(LocalizationKey::SystemConfig).bold().yellow());
     println!("━━━━━━━━━━━━━━━━━━━━");
-    check_hpet_status()?;
+    check_hpet_status(&localization)?;
     println!();
 
-    // ========================================================================
-    // NEW: OPTIMIZATION METHOD SELECTION
-    // ========================================================================
     println!("{}", localization.get(LocalizationKey::OptimizationMethod).bold().yellow());
     println!("━━━━━━━━━━━━━━━━━━━━━━━━━━━━━");
     println!();
@@ -409,7 +365,6 @@ pub async fn run_benchmark() -> io::Result<()> {
     let optimization_method = method_input.trim();
     println!();
 
-    // Load and parse configuration
     let parameters = match fs::read_to_string("appsettings.json")
         .and_then(|content| serde_json::from_str::<BenchmarkingParameters>(&content)
             .map_err(|e| Error::new(ErrorKind::InvalidData, e)))
@@ -417,8 +372,8 @@ pub async fn run_benchmark() -> io::Result<()> {
         Ok(mut params) => {
             let mut input = String::new();
             let mut prompt = |desc: &str, current: &str| -> io::Result<Option<String>> {
-                println!("▸ {}: {}{}", desc, current, localization.get_keep_current());
-                println!("{}", localization.get_enter_new_value());
+                println!("▸ {}: {}{}", desc, current, localization.get(LocalizationKey::KeepCurrent));
+                println!("{}", localization.get(LocalizationKey::EnterNewValue));
                 input.clear();
                 io::stdin().read_line(&mut input)?;
                 let trimmed = input.trim();
@@ -431,7 +386,6 @@ pub async fn run_benchmark() -> io::Result<()> {
             if let Some(new_value) = prompt(&localization.get(LocalizationKey::StartValue), &format!("{:.4} ms", params.start_value))? {
                 params.start_value = new_value.parse().map_err(|e| Error::new(ErrorKind::InvalidInput, e))?;
             }
-            // IMPORTANT: For linear method we show Increment Value, for hybrid method we hide it
             if optimization_method == "1" {
                 if let Some(new_value) = prompt(&localization.get(LocalizationKey::IncrementValue), &format!("{:.4} ms", params.increment_value))? {
                     params.increment_value = new_value.parse().map_err(|e| Error::new(ErrorKind::InvalidInput, e))?;
@@ -446,41 +400,38 @@ pub async fn run_benchmark() -> io::Result<()> {
                 params.sample_value = new_value.parse().map_err(|e| Error::new(ErrorKind::InvalidInput, e))?;
             }
 
-            // Show the number of iterations depending on the method
             match optimization_method {
                 "1" => {
                     let iterations = ((params.end_value - params.start_value) / params.increment_value).ceil();
-                    println!("▸ {}\n", localization.get(LocalizationKey::IterationsLinear).replace("{}", &iterations.to_string()));
+                    println!("▸ {}\n", localization.get_iterations_linear(iterations as i32));
                 },
                 _ => {
                     println!("▸ {}\n", localization.get(LocalizationKey::IterationsHybrid));
                 }
             }
 
-            // Save updated parameters back to appsettings.json
             if let Err(e) = fs::write("appsettings.json", serde_json::to_string_pretty(&params)?) {
-                eprintln!("❌ Failed to save updated parameters: {}", e);
+                eprintln!("{}", localization.get_error_save_parameters(&e.to_string()));
             }
 
             params
         },
         Err(e) => {
-            eprintln!("❌ Configuration Error: {}", e);
+            eprintln!("{}", localization.get_error_configuration(&e.to_string()));
             return Err(e);
         }
     };
 
     let exe_dir = env::current_exe()?.parent()
         .ok_or_else(|| {
-            eprintln!("❌ Error: Failed to get current executable path");
-            Error::new(ErrorKind::Other, "Failed to get current executable path")
+            eprintln!("{}", localization.get(LocalizationKey::ErrorGetExePath));
+            Error::new(ErrorKind::Other, localization.get(LocalizationKey::ErrorGetExePath))
         })?
         .to_path_buf();
 
     let set_timer_resolution_path = exe_dir.join("SetTimerResolution.exe");
     let measure_sleep_path = exe_dir.join("MeasureSleep.exe");
 
-    // Dependency check
     println!("\n{}", localization.get(LocalizationKey::Dependencies));
     println!("━━━━━━━━━━━━━━━━━━━━━");
 
@@ -492,7 +443,7 @@ pub async fn run_benchmark() -> io::Result<()> {
     let missing_dependencies: Vec<_> = dependencies.iter()
         .filter_map(|(name, path)| {
             if path.exists() {
-                println!("{}", localization.get(LocalizationKey::Found).replace("{}", &path.file_name().unwrap_or_default().to_string_lossy()));
+                println!("{}", localization.get_found(&path.file_name().unwrap_or_default().to_string_lossy()));
                 None
             } else {
                 Some(*name)
@@ -501,57 +452,50 @@ pub async fn run_benchmark() -> io::Result<()> {
         .collect();
 
     if !missing_dependencies.is_empty() {
-        eprintln!("{}", localization.get(LocalizationKey::MissingDeps).replace("{}", &missing_dependencies.join(", ")));
+        eprintln!("{}", localization.get_missing_deps(&missing_dependencies.join(", ")));
         return Err(Error::new(ErrorKind::NotFound, "Missing dependencies"));
     }
     println!();
 
-    // Check functionality of MeasureSleep.exe
     println!("{}", localization.get(LocalizationKey::MeasureSleepTest));
     let test_output = Command::new(&measure_sleep_path)
         .arg("--samples")
         .arg("5")
         .output()?;
     if !test_output.status.success() {
-        eprintln!("❌ MeasureSleep.exe вернул ошибку:");
+        eprintln!("{}", localization.get(LocalizationKey::ErrorMeasureSleep));
         eprintln!("{}", String::from_utf8_lossy(&test_output.stderr));
         return Err(Error::new(ErrorKind::Other, "MeasureSleep.exe failed"));
     }
     let (test_delta, test_stdev) = parse_measurement_output(&test_output.stdout)?;
-    println!("   Тест: Δ={:.4} ms, σ={:.4} ms ✓", test_delta, test_stdev);
+    println!("{}", localization.get_test_passed(test_delta, test_stdev));
 
-    // After MeasureSleep.exe test and BEFORE prompt_user:
-    println!("\n🧹 Cleaning up any running SetTimerResolution instances...");
+    println!("{}", localization.get(LocalizationKey::CleaningUp));
     force_kill_all_timer_processes()?;
-    sleep(Duration::from_millis(1000)).await;  // Longer pause!
+    sleep(Duration::from_millis(1000)).await;
     
-    // Verify that all are killed
     let remaining = count_timer_processes();
     if remaining > 0 {
-        eprintln!("❌ CRITICAL: {} SetTimerResolution.exe still running!", remaining);
-        eprintln!("   Please close ALL instances manually:");
-        eprintln!("   1. Open Task Manager (Ctrl+Shift+Esc)");
-        eprintln!("   2. Find all SetTimerResolution.exe processes");
-        eprintln!("   3. End Task for each one");
-        eprintln!("   4. Restart this benchmark");
-        return Err(Error::new(ErrorKind::Other,"Cannot proceed - SetTimerResolution.exe instances still running"));
+        eprintln!("{}", localization.get_critical_process_remaining(remaining));
+        eprintln!("{}", localization.get(LocalizationKey::ManualCleanupInstructions));
+        eprintln!("{}", localization.get(LocalizationKey::ManualCleanup1));
+        eprintln!("{}", localization.get(LocalizationKey::ManualCleanup2));
+        eprintln!("{}", localization.get(LocalizationKey::ManualCleanup3));
+        eprintln!("{}", localization.get(LocalizationKey::ManualCleanup4));
+        return Err(Error::new(ErrorKind::Other, localization.get(LocalizationKey::ErrorCannotProceed)));
     }
-    println!("   ✓ Cleanup completed - no instances running\n");
+    println!("{}", localization.get(LocalizationKey::CleanupCompleted));
     
-    prompt_user(&localization.get(LocalizationKey::PressEnter), &localization)?;
+    prompt_user(&localization.get(LocalizationKey::PressEnter))?;
     
-    fn prompt_user(message: &str, _localization: &Localization) -> io::Result<()> {
+    fn prompt_user(message: &str) -> io::Result<()> {
         println!("{}", message);
         io::stdin().read_line(&mut String::new())?;
         Ok(())
     }
 
-    // ========================================================================
-    // RUN SELECTED METHOD
-    // ========================================================================
     let result = match optimization_method {
         "1" => {
-            // LINEAR METHOD
             match linear_exhaustive_search(
                 &parameters,
                 &set_timer_resolution_path,
@@ -560,14 +504,13 @@ pub async fn run_benchmark() -> io::Result<()> {
             ).await {
                 Ok(r) => r,
                 Err(e) => {
-                    eprintln!("\n❌ LINEAR SEARCH FAILED: {}", e);
-                    kill_all_timer_processes()?;  // Cleanup
+                    eprintln!("{}", localization.get_error_linear_search(&e.to_string()));
+                    kill_all_timer_processes()?;
                     return Err(e);
                 }
             }
         },
         "2" | "" => {
-            // 3-ФАЗНАЯ ГИБРИДНАЯ (существующий код)
             match optimize_timer_resolution(
                 &parameters,
                 &set_timer_resolution_path,
@@ -576,33 +519,29 @@ pub async fn run_benchmark() -> io::Result<()> {
             ).await {
                 Ok(r) => r,
                 Err(e) => {
-                    eprintln!("\n❌ OPTIMIZATION FAILED: {}", e);
-                    kill_all_timer_processes()?;  // Cleanup
+                    eprintln!("{}", localization.get_error_optimization(&e.to_string()));
+                    kill_all_timer_processes()?;
                     return Err(e);
                 }
             }
         },
         _ => {
-            eprintln!("❌ Неверный выбор метода");
+            eprintln!("{}", localization.get(LocalizationKey::ErrorInvalidMethod));
             return Err(Error::new(ErrorKind::InvalidInput, "Invalid method"));
         }
     };
 
-    // Save detailed results
     save_detailed_results(&result, "results.txt")?;
-
     println!("{}", localization.get(LocalizationKey::BenchmarkComplete));
 
-    // Clean up any remaining SetTimerResolution processes
     if let Err(e) = cleanup_processes() {
-        eprintln!("{}", localization.get(LocalizationKey::WarningCleanup).replace("{}", &e.to_string()));
+        eprintln!("{}", localization.get_warning_cleanup(&e.to_string()));
     }
 
-    // Wait for user input before exiting
     prompt_exit(&localization)?;
     
     fn prompt_exit(localization: &Localization) -> io::Result<()> {
-        println!("{}", localization.get_exit_prompt());
+        println!("{}", localization.get(LocalizationKey::GetExitPrompt));
         io::stdin().read_line(&mut String::new())?;
         Ok(())
     }
@@ -620,54 +559,43 @@ async fn optimize_timer_resolution(
     let bounds = (params.start_value, params.end_value);
     let max_iterations = 15;
     let samples_per_run = params.sample_value;
-    let runs_per_measurement = 3; // По 3 прогона для каждой точки!
+    let runs_per_measurement = 3;
 
     println!("\n{}", localization.get(LocalizationKey::RobustOptimization));
     println!("━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━");
     println!("{}", localization.get(LocalizationKey::Parameters));
     println!("   {}", localization.get_range(bounds.0, bounds.1));
-    println!("   {}: {}", localization.get(LocalizationKey::IterationsCount), max_iterations);
-    println!("   {}: {}", localization.get(LocalizationKey::RunsPerPoint), runs_per_measurement);
-    println!("   {}: {}", localization.get(LocalizationKey::SamplesPerRun), samples_per_run);
-    println!("   {}: {:.0}%, {:.0}%, {:.0}%", 
-        localization.get(LocalizationKey::Weights), 
-        weights.accuracy * 100.0, 
-        weights.consistency * 100.0, 
-        weights.worst_case * 100.0);
+    println!("   {}", localization.get_iterations_linear(max_iterations));
+        println!("   {}", localization.get(LocalizationKey::LinearMethodRuns));
+        println!("   {}", localization.get_linear_method_samples(samples_per_run));
+    println!("   {}", localization.get_weights(weights.accuracy * 100.0, weights.consistency * 100.0, weights.worst_case * 100.0));
     println!();
 
-    // Адаптивная ширина ядра на основе диапазона
     let range = bounds.1 - bounds.0;
-    let kernel_width = range * 0.15; // 15% от диапазона
-    println!("   Kernel width: {:.4} ms", kernel_width);
+    let kernel_width = range * 0.15;
+    println!("{}", localization.get_kernel_width(kernel_width));
     let mut optimizer = BayesianOptimizer::new(kernel_width, weights.clone());
 
-    // Latin Hypercube Sampling для лучшего начального покрытия
     fn latin_hypercube_sampling(bounds: (f64, f64), n_points: usize) -> Vec<f64> {
         let (low, high) = bounds;
         let segment_size = (high - low) / n_points as f64;
-        (0..n_points).map(|i| {
-            low + (i as f64 + 0.5) * segment_size
-        }).collect()
+        (0..n_points).map(|i| low + (i as f64 + 0.5) * segment_size).collect()
     }
-    let initial_points = latin_hypercube_sampling(bounds, 5); // 5 initial points
-    println!("   Initial points: {:?}", initial_points.iter()
-        .map(|&x| format!("{:.4}", x))
-        .collect::<Vec<_>>());
+    let initial_points = latin_hypercube_sampling(bounds, 5);
+    println!("{}", localization.get_initial_points(&format!("{:?}", initial_points.iter().map(|&x| format!("{:.4}", x)).collect::<Vec<_>>())));
     println!("{}", localization.get_phase1(initial_points.len()));
     println!("━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━");
     
-    // Create progress bar for initial points
     let init_pb = ProgressBar::new(initial_points.len() as u64);
     init_pb.set_style(
         ProgressStyle::default_bar()
-            .template("[{elapsed_precise}] [{bar:40.cyan/blue}] {pos}/{len} initialization points {wide_msg}")
+            .template(&localization.get(LocalizationKey::InitProgressBar))
             .unwrap()
             .progress_chars("##-")
     );
     
     for (i, &x) in initial_points.iter().enumerate() {
-        init_pb.set_message(format!("point {:.4}ms", x));
+        init_pb.set_message(localization.get_init_point_message(x));
         println!("{}", localization.get_point_info(i + 1, initial_points.len(), x));
         let measurement = measure_resolution_robust(
             x,
@@ -680,26 +608,24 @@ async fn optimize_timer_resolution(
         optimizer.add_observation(measurement);
         init_pb.inc(1);
     }
-    init_pb.finish_with_message("initialization completed");
+    init_pb.finish_with_message(localization.get(LocalizationKey::InitCompleted));
 
     println!("\n{}", localization.get(LocalizationKey::Phase2));
     println!("━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━");
     
-    // Create progress bar for optimization iterations
-    let total_iterations = max_iterations - initial_points.len(); // Starting after initial points
+    let total_iterations = max_iterations as usize - initial_points.len();
     let opt_pb = ProgressBar::new(total_iterations as u64);
     opt_pb.set_style(
         ProgressStyle::default_bar()
-            .template("[{elapsed_precise}] [{bar:40.cyan/blue}] {pos}/{len} оптимизационных итераций {wide_msg}")
+            .template(&localization.get(LocalizationKey::OptProgressBar))
             .unwrap()
             .progress_chars("##-")
     );
     
-    for iter in initial_points.len()..max_iterations {
-        // Адаптивный kappa: начинаем с exploration (2.5), заканчиваем exploitation (0.5)
-        let kappa = 2.5 - (2.0 * (iter - initial_points.len()) as f64 / (max_iterations - initial_points.len()) as f64);
+    for iter in initial_points.len()..max_iterations as usize {
+        let kappa = 2.5 - (2.0 * (iter - initial_points.len()) as f64 / (max_iterations as usize - initial_points.len()) as f64);
         let next_x = optimizer.suggest_next(bounds, 200, kappa);
-        println!("  {}", localization.get_iterations_with_kappa(iter + 1, next_x, kappa));
+        println!("  {}", localization.get_iterations_with_kappa(iter + 1, max_iterations as usize, next_x, kappa));
         let measurement = measure_resolution_robust(
             next_x,
             samples_per_run,
@@ -710,7 +636,6 @@ async fn optimize_timer_resolution(
         ).await?;
         optimizer.add_observation(measurement);
         
-        // Диагностика конвергенции
         let current_best = optimizer.observations.iter()
             .min_by(|a, b| {
                 let score_a = a.statistics.performance_score(&weights);
@@ -718,38 +643,30 @@ async fn optimize_timer_resolution(
                 score_a.partial_cmp(&score_b).unwrap()
             })
             .unwrap();
-        println!("       {}", 
-                 localization.get_current_best(
-                     current_best.resolution_ms, 
-                     current_best.statistics.performance_score(&weights)
-                 ));
+        println!("       {}", localization.get_current_best(current_best.resolution_ms, current_best.statistics.performance_score(&weights)));
         
-        
-        // ✅ ADD: Force cleanup between iterations
         kill_all_timer_processes()?;
         sleep(Duration::from_millis(300)).await;
         opt_pb.inc(1);
     }
-    opt_pb.finish_with_message("optimization completed");
+    opt_pb.finish_with_message(localization.get(LocalizationKey::OptCompleted));
 
     println!("\n{}", localization.get(LocalizationKey::Phase3));
     println!("━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━");
     let aggregated_measurements = aggregate_measurements(&optimizer.observations);
-    println!("   Уникальных точек: {} (было измерений: {})", 
-             aggregated_measurements.len(), optimizer.observations.len());
+    println!("{}", localization.get_unique_points(aggregated_measurements.len(), optimizer.observations.len()));
     let topsis_results = topsis_ranking(&aggregated_measurements);
 
-    // Топ-5 результатов
     println!("\n{}", localization.get(LocalizationKey::TopsisRanking));
     println!("━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n");
     for (i, result) in topsis_results.iter().take(5).enumerate() {
         let marker = if i == 0 { "🥇" } else if i == 1 { "🥈" } else if i == 2 { "🥉" } else { "  " };
         println!("{}  {}: {:.4} ms", marker, localization.get_rank(result.rank), result.resolution_ms);
-        println!("     TOPSIS Score: {:.4}", result.closeness_coefficient);
-        println!("     P95 Delta:    {:.4} ms", result.criteria_scores.p95_delta);
-        println!("     MAD:          {:.4} ms", result.criteria_scores.mad);
-        println!("     P99 Delta:    {:.4} ms", result.criteria_scores.p99_delta);
-        println!("     CI Width:     {:.4} ms", result.criteria_scores.confidence_width);
+        println!("{}", localization.get_topsis_score(result.closeness_coefficient));
+        println!("{}", localization.get_p95_delta(result.criteria_scores.p95_delta));
+        println!("{}", localization.get_mad(result.criteria_scores.mad));
+        println!("{}", localization.get_p99_delta(result.criteria_scores.p99_delta));
+        println!("{}", localization.get_ci_width(result.criteria_scores.confidence_width));
         println!();
     }
 
@@ -819,9 +736,8 @@ async fn measure_resolution_robust(
     measure_sleep_path: &PathBuf,
     localization: &Localization,
 ) -> io::Result<TimerMeasurement> {
-    // ✅ КРИТИЧНО: Полная очистка ПЕРЕД измерением
     kill_all_timer_processes()?;
-    sleep(Duration::from_millis(300)).await;  // Даём системе сбросить таймер
+    sleep(Duration::from_millis(300)).await;
     
     let mut all_deltas = Vec::new();
     println!("{}", localization.get_measurement_with_runs(resolution_ms, num_runs, samples_per_run));
@@ -829,25 +745,20 @@ async fn measure_resolution_robust(
     for run in 1..=num_runs {
         let resolution = (resolution_ms * 10_000.0) as i32;
         
-        // ✅ КРИТИЧНО: Сначала убить все старые экземпляры
         kill_all_timer_processes()?;
         sleep(Duration::from_millis(200)).await;
         
-        // Затем запустить новый
         let mut timer_child = Command::new(set_timer_path)
             .args(&["--resolution", &resolution.to_string(), "--no-console"])
-            .stderr(Stdio::piped())  // Захватываем stderr для диагностики
-            .stdout(Stdio::piped())  // Захватываем stdout тоже!
+            .stderr(Stdio::piped())
+            .stdout(Stdio::piped())
             .spawn()
             .map_err(|e| Error::new(ErrorKind::Other, format!("Failed to spawn SetTimerResolution: {}", e)))?;
 
-        // ✅ CRITICAL: Immediate check (50ms) that process is alive
         sleep(Duration::from_millis(50)).await;
         
-        // Check that process is still running
         match timer_child.try_wait() {
             Ok(Some(_exit_status)) => {
-                // Process HAS ALREADY exited - read error
                 let mut stderr_output = String::new();
                 let mut stdout_output = String::new();
                 if let Some(mut stderr) = timer_child.stderr.take() {
@@ -858,31 +769,23 @@ async fn measure_resolution_robust(
                 }
                 let error_msg = format!("{}{}", stderr_output, stdout_output);
                 if error_msg.contains("already running") || error_msg.contains("Another instance") {
-                    eprintln!("\n❌ CRITICAL ERROR: SetTimerResolution mutex conflict!");
-                    eprintln!("   Message: {}", error_msg.trim());
-                    eprintln!("\n   This means another SetTimerResolution.exe is ALREADY running!");
-                    eprintln!("   Please close ALL instances and restart benchmark.");
+                    eprintln!("{}", localization.get(LocalizationKey::ErrorMutexConflict));
+                    eprintln!("{}", localization.get_mutex_error_message(&error_msg.trim()));
+                    eprintln!("{}", localization.get(LocalizationKey::MutexErrorHint));
+                    eprintln!("{}", localization.get(LocalizationKey::MutexErrorRestart));
                     kill_all_timer_processes()?;
-                    return Err(Error::new(ErrorKind::AlreadyExists,"SetTimerResolution.exe mutex conflict - another instance is running"));
+                    return Err(Error::new(ErrorKind::AlreadyExists, localization.get(LocalizationKey::ErrorMutexRunning)));
                 }
-                return Err(Error::new(ErrorKind::Other,
-                    format!("SetTimerResolution exited immediately: {}", error_msg)));
+                return Err(Error::new(ErrorKind::Other, localization.get_error_process_exited(&error_msg)));
             },
-            Ok(None) => {
-                // Process is running - OK!
-            },
+            Ok(None) => {},
             Err(e) => {
-                eprintln!("    ⚠️ Warning: Cannot check process status: {}", e);
+                eprintln!("{}", localization.get_warning_cannot_check_process(&e.to_string()));
             }
         }
 
-        // Continue with increased warmup
-        sleep(Duration::from_millis(350)).await;  // Total 400ms warmup (50ms + 350ms)
+        sleep(Duration::from_millis(350)).await;
         
-        // ✅ DON'T CHECK count_timer_processes - it's unreliable!
-        // Instead, rely ONLY on verification via MeasureSleep output
-        
-        // Измерение с таймаутом
         let measure_path = measure_sleep_path.clone();
         let samples = samples_per_run;
         let output_result = timeout(
@@ -912,7 +815,7 @@ async fn measure_resolution_robust(
             Err(_) => {
                 let _ = timer_child.kill();
                 kill_all_timer_processes()?;
-                eprintln!("{}", localization.get_timeout_error());
+                eprintln!("{}", localization.get(LocalizationKey::TimeoutError));
                 return Err(Error::new(ErrorKind::TimedOut, "MeasureSleep timeout"));
             }
         };
@@ -920,55 +823,50 @@ async fn measure_resolution_robust(
         if !output.status.success() {
             let _ = timer_child.kill();
             kill_all_timer_processes()?;
-            eprintln!("    ❌ MeasureSleep.exe failed:");
+            eprintln!("{}", localization.get(LocalizationKey::ErrorMeasureSleepFailed));
             eprintln!("{}", String::from_utf8_lossy(&output.stderr));
             return Err(Error::new(ErrorKind::Other, "MeasureSleep execution failed"));
         }
         
-        // ✅ CRITICAL: Parse with extraction of the set resolution
         let (delta, _stdev, measure_reported_res) = parse_measurement_output_with_resolution(&output.stdout)?;
         
-        // ✅ VERIFICATION: Check that MeasureSleep sees the correct resolution
         if let Some(reported) = measure_reported_res {
-            let tolerance = 0.05; // 5% tolerance or 0.05 ms
+            let tolerance = 0.05;
             let diff = (reported - resolution_ms).abs();
             if diff > tolerance {
-                eprintln!("    ⚠️ WARNING: Resolution mismatch!");
-                eprintln!("       Expected:  {:.4} ms", resolution_ms);
-                eprintln!("       Reported:  {:.4} ms (by MeasureSleep)", reported);
-                eprintln!("       Diff:      {:.4} ms", diff);
+                eprintln!("{}", localization.get(LocalizationKey::WarningResolutionMismatch));
+                eprintln!("{}", localization.get_expected(resolution_ms));
+                eprintln!("{}", localization.get_reported(reported));
+                eprintln!("{}", localization.get_diff(diff));
                 
-                // CRITICAL: If the difference is > 0.1 ms - STOP!
                 if diff > 0.1 {
                     let _ = timer_child.kill();
                     kill_all_timer_processes()?;
                     return Err(Error::new(ErrorKind::Other,
-                        format!("Critical resolution mismatch: expected {:.4}ms, got {:.4}ms",
-                        resolution_ms, reported)));
+                        localization.get_critical_mismatch(resolution_ms, reported)));
                 }
             } else {
-                println!("       ✓ Verified: {:.4} ms", reported);
+                println!("{}", localization.get_verified(reported));
             }
         } else {
-            eprintln!("    ⚠️ WARNING: Could not parse resolution from MeasureSleep output!");
-            // Show output for debugging
-            eprintln!("       Output preview: {}",
-                String::from_utf8_lossy(&output.stdout).lines().next().unwrap_or("(empty)"));
+            eprintln!("{}", localization.get(LocalizationKey::WarningParseResolution));
+            eprintln!("{}",
+                localization.get_output_preview(
+                    &String::from_utf8_lossy(&output.stdout).lines().next().unwrap_or(localization.get(LocalizationKey::Empty))
+                )
+            );
         }
         
         all_deltas.push(delta);
         print!(".");
         io::stdout().flush()?;
         
-        // ✅ CRITICAL: Kill process after EACH run
         if let Err(e) = timer_child.kill() {
-            eprintln!("    ⚠️ Warning: Failed to kill child process: {}", e);
+            eprintln!("{}", localization.get_warning_kill_child(&e.to_string()));
         }
         
-        // ✅ CRITICAL: Additional cleanup via taskkill (for guarantee)
         kill_all_timer_processes()?;
         
-        // Increased pause between runs (600ms!) for complete stabilization
         if run < num_runs {
             sleep(Duration::from_millis(600)).await;
         }
@@ -1028,11 +926,28 @@ async fn linear_exhaustive_search(
 ) -> io::Result<OptimizationResult> {
     println!("\n{}", localization.get(LocalizationKey::LinearMethodTitle));
     println!("━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━");
-    let mut current = params.start_value;
+    
+    // ✅ ИСПРАВЛЕНИЕ: Используем целочисленный счётчик вместо float
     let total_points = ((params.end_value - params.start_value) / params.increment_value).ceil() as usize;
+
+    // Validation: prevent infinite loop
+    if total_points == 0 {
+        return Err(Error::new(ErrorKind::InvalidInput,
+            format!("Invalid parameters: start={:.4}, end={:.4}, increment={:.4} results in 0 points",
+                params.start_value, params.end_value, params.increment_value)));
+    }
+
+    if total_points > 100_000 {
+        eprintln!("⚠️  WARNING: {} points will be tested!", total_points);
+        eprintln!("   This will take approximately {:.1} hours", (total_points as f64 * 6.5) / 3600.0);
+        eprintln!("   Press Ctrl+C to abort, or Enter to continue...");
+        let mut input = String::new();
+        io::stdin().read_line(&mut input)?;
+    }
+
     println!("{}", localization.get(LocalizationKey::LinearMethodParameters));
     
-    // Format range message based on selected language
+    // Format messages based on language
     let range_message = match localization.language {
         crate::ui::language::Language::English => format!("   Range: [{:.4}, {:.4}] ms", params.start_value, params.end_value),
         crate::ui::language::Language::Russian => format!("   Диапазон: [{:.4}, {:.4}] ms", params.start_value, params.end_value),
@@ -1040,8 +955,7 @@ async fn linear_exhaustive_search(
         crate::ui::language::Language::Chinese => format!("   范围: [{:.4}, {:.4}] ms", params.start_value, params.end_value),
     };
     println!("{}", range_message);
-    
-    // Format step message
+
     let step_message = match localization.language {
         crate::ui::language::Language::English => format!("   Step: {:.4} ms", params.increment_value),
         crate::ui::language::Language::Russian => format!("   Шаг: {:.4} ms", params.increment_value),
@@ -1049,8 +963,7 @@ async fn linear_exhaustive_search(
         crate::ui::language::Language::Chinese => format!("   步长: {:.4} ms", params.increment_value),
     };
     println!("{}", step_message);
-    
-    // Format points message
+
     let points_message = match localization.language {
         crate::ui::language::Language::English => format!("   Points to check: {}", total_points),
         crate::ui::language::Language::Russian => format!("   Точек для проверки: {}", total_points),
@@ -1058,8 +971,7 @@ async fn linear_exhaustive_search(
         crate::ui::language::Language::Chinese => format!("   待检查点数: {}", total_points),
     };
     println!("{}", points_message);
-    
-    // Format runs message
+
     let runs_message = match localization.language {
         crate::ui::language::Language::English => "   Runs per point: 3",
         crate::ui::language::Language::Russian => "   Прогонов на точку: 3",
@@ -1067,8 +979,7 @@ async fn linear_exhaustive_search(
         crate::ui::language::Language::Chinese => "   每点运行次数: 3",
     };
     println!("{}", runs_message);
-    
-    // Format samples message
+
     let samples_message = match localization.language {
         crate::ui::language::Language::English => format!("   Samples per run: {}", params.sample_value),
         crate::ui::language::Language::Russian => format!("   Выборок на прогон: {}", params.sample_value),
@@ -1076,48 +987,164 @@ async fn linear_exhaustive_search(
         crate::ui::language::Language::Chinese => format!("   每次运行样本数: {}", params.sample_value),
     };
     println!("{}", samples_message);
-    println!();
-    
-    let estimated_time = (total_points as f64 * 6.5) / 60.0;
-    let estimated_time_text = match localization.language {
-        crate::ui::language::Language::English => format!("⏱️  Estimated time: {:.1} minutes\n", estimated_time),
-        crate::ui::language::Language::Russian => format!("⏱️  Приблизительное время: {:.1} минут\n", estimated_time),
-        crate::ui::language::Language::Ukrainian => format!("⏱️  Приблизний час: {:.1} хвилин\n", estimated_time),
-        crate::ui::language::Language::Chinese => format!("⏱️  估计时间: {:.1} 分钟\n", estimated_time),
-    };
-    println!("{}", estimated_time_text);
 
+    println!();
+
+    // ✅ FIX 3: Remove misleading estimate, show realistic warning
+    let note_message = match localization.language {
+        crate::ui::language::Language::English => format!("📝 Note: {} points will be tested. Real-time ETA will be shown after first {} measurements.", total_points, 5),
+        crate::ui::language::Language::Russian => format!("📝 Примечание: Будет протестировано {} точек. Real-time ETA покажется после {} измерений.", total_points, 5),
+        crate::ui::language::Language::Ukrainian => format!("📝 Примітка: Буде протестовано {} точок. Real-time ETA з'явиться після {} вимірювань.", total_points, 5),
+        crate::ui::language::Language::Chinese => format!("📝 注意: 将测试 {} 个点。前 {} 次测量后将显示实时 ETA。", total_points, 5),
+    };
+    println!("{}\n", note_message);
+
+    // ✅ НОВОЕ: Progress bar с ETA
     let pb = ProgressBar::new(total_points as u64);
-    pb.set_style(
-        ProgressStyle::default_bar()
-            .template("[{elapsed_precise}] [{bar:40.cyan/blue}] {pos}/{len} {msg}")
-            .unwrap()
-            .progress_chars("##-")
-    );
+    pb.set_style(ProgressStyle::default_bar()
+        .template("{spinner:.green} [{elapsed_precise}] [{bar:40.cyan/blue}] {pos}/{len} {msg} | ETA: {eta}")
+        .unwrap()
+        .progress_chars("##-"));
+
+    // ✅ CORRECTED: Check increment for extremely small values only
+    if params.increment_value < 0.00001 {  // < 0.01 микросекунды
+        eprintln!("⚠️  WARNING: Increment {:.6} ms is extremely small!", params.increment_value);
+        eprintln!("   Minimum Windows timer resolution unit: 0.0001 ms (100 ns)");
+        eprintln!("   Values smaller than 0.0001 ms will be indistinguishable.");
+        eprintln!();
+        print!("Continue anyway? (y/N): ");
+        io::stdout().flush()?;
+        let mut input = String::new();
+        io::stdin().read_line(&mut input)?;
+        if !input.trim().eq_ignore_ascii_case("y") {
+            return Err(Error::new(ErrorKind::InvalidInput, "Increment too small"));
+        }
+    }
+
+    if total_points > 100_000 {
+        eprintln!("⚠️  WARNING: {} points will be tested!", total_points);
+        eprintln!("   This will take approximately {:.1} hours", (total_points as f64 * 35.0) / 3600.0);
+        eprintln!("   Press Ctrl+C to abort, or Enter to continue...");
+        let mut input = String::new();
+        io::stdin().read_line(&mut input)?;
+    }
 
     let mut measurements = Vec::new();
-    while current <= params.end_value {
+    let start_time = std::time::Instant::now();
+    
+    // ✅ FIX 2: EMA for smooth ETA
+    let mut ema_time_per_point: Option<f64> = None;
+    const EMA_ALPHA: f64 = 0.15;  // Smoothing factor (0.1-0.2 optimal)
+    const MIN_SAMPLES_FOR_ETA: usize = 5;  // Минимум измерений перед показом ETA
+    
+    // Initialize the weights for performance scoring (used in TOPSIS ranking)
+    let _weights = PerformanceWeights::default();
+
+    // ✅ КРИТИЧНО: Целочисленный цикл вместо float инкремента!
+    for i in 0..total_points {
+        // Вычисляем current через целочисленный индекс - нет накопления ошибок!
+        let current = params.start_value + (i as f64) * params.increment_value;
+        
+        // Защита от выхода за bounds из-за округлений
+        if current > params.end_value {
+            break;
+        }
+        
         pb.set_message(format!("{:.4} ms", current));
         let measurement = measure_resolution_robust(
             current,
             params.sample_value,
-            3,  // 3 прогона
+            3,  // 3 runs
             set_timer_path,
             measure_sleep_path,
             localization,
         ).await?;
         measurements.push(measurement);
         pb.inc(1);
-        current += params.increment_value;
+
+        // ✅ НОВОЕ - показывает TOPSIS Score (лучший по всем критериям!)
+        // Вычисляем TOPSIS для текущих измерений
+        let temp_aggregated = aggregate_measurements(&measurements);
+        let temp_topsis = topsis_ranking(&temp_aggregated);
+        if !temp_topsis.is_empty() {
+            let best = &temp_topsis[0];
+            pb.println(format!("       Current best: {:.4} ms (TOPSIS: {:.4})", 
+                best.resolution_ms, 
+                best.closeness_coefficient));
+        }
+
+        // ✅ ADAPTIVE ETA с EMA сглаживанием
+        if i + 1 >= MIN_SAMPLES_FOR_ETA {
+            let elapsed = start_time.elapsed().as_secs_f64();
+            let instant_time_per_point = elapsed / ((i + 1) as f64);
+
+            // Exponential Moving Average (EMA)
+            // Formula: EMA_new = alpha * current + (1 - alpha) * EMA_old
+            let smoothed_time = match ema_time_per_point {
+                Some(prev_ema) => {
+                    // EMA сглаживание для плавного перехода
+                    EMA_ALPHA * instant_time_per_point + (1.0 - EMA_ALPHA) * prev_ema
+                },
+                None => instant_time_per_point  // Первый раз
+            };
+            ema_time_per_point = Some(smoothed_time);
+            let remaining_points = total_points - (i + 1);
+            let eta_seconds = smoothed_time * (remaining_points as f64);
+
+            // Форматирование ETA
+            let eta_display = if eta_seconds < 90.0 {
+                format!("{:.0}s", eta_seconds)
+            } else if eta_seconds < 5400.0 {  // < 90 min
+                format!("{:.1}m", eta_seconds / 60.0)
+            } else {
+                format!("{:.2}h", eta_seconds / 3600.0)
+            };
+
+            // ✅ НОВОЕ: Confidence interval для ETA
+            let variance = (instant_time_per_point - smoothed_time).abs() / smoothed_time;
+            let confidence_margin = smoothed_time * variance * 0.5;  // ±50% от вариативности
+            let eta_min = (eta_seconds - confidence_margin * remaining_points as f64).max(0.0) / 60.0;
+            let eta_max = (eta_seconds + confidence_margin * remaining_points as f64) / 60.0;
+
+            // Показываем ETA range для честности
+            if variance > 0.15 {  // Высокая вариативность
+                pb.set_message(format!("{:.4} ms | ETA: {} (~{:.0}-{:.0}m)", current, eta_display, eta_min, eta_max));
+            } else {
+                pb.set_message(format!("{:.4} ms | ETA: {}", current, eta_display));
+            }
+        } else {
+            // Первые несколько измерений
+            pb.set_message(format!("{:.4} ms | ETA: calculating...", current));
+        }
     }
-    pb.finish_with_message("линейный поиск завершён");
+    pb.finish_with_message("linear search completed");
 
     let aggregated = aggregate_measurements(&measurements);
     let topsis_results = topsis_ranking(&aggregated);
 
-    println!("\n✅ Линейный поиск завершён:");
-    println!("   Проверено точек: {}", measurements.len());
-    println!("   Уникальных: {}", aggregated.len());
+    println!("\n✅ Linear search completed:");
+    println!("   Points checked: {}", measurements.len());
+    println!("   Unique: {}", aggregated.len());
+    println!("   Total time: {:.1} minutes", start_time.elapsed().as_secs_f64() / 60.0);
+
+    // ✅ ДОБАВИТЬ: TOP-5 результаты (как в optimize_timer_resolution!)
+    println!("\n{}", localization.get(LocalizationKey::TopsisRanking));
+    println!("━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n");
+    
+    for (i, result) in topsis_results.iter().take(5).enumerate() {
+        let marker = if i == 0 { "🥇" } else if i == 1 { "🥈" } else if i == 2 { "🥉" } else { "  " };
+        println!("{}  {}: {:.4} ms", marker, localization.get_rank(result.rank), result.resolution_ms);
+        println!("{}", localization.get_topsis_score(result.closeness_coefficient));
+        println!("{}", localization.get_p95_delta(result.criteria_scores.p95_delta));
+        println!("{}", localization.get_mad(result.criteria_scores.mad));
+        println!("{}", localization.get_p99_delta(result.criteria_scores.p99_delta));
+        println!("{}", localization.get_ci_width(result.criteria_scores.confidence_width));
+        println!();
+    }
+
+    let best = &topsis_results[0];
+    println!("{}", localization.get_optimal_value(best.resolution_ms));
+    println!("   {}\n", localization.get_optimal_recommendation((best.resolution_ms * 10_000.0) as i32));
 
     Ok(OptimizationResult {
         optimal_resolution: topsis_results[0].resolution_ms,
