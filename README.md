@@ -1,5 +1,12 @@
 # EnhancedTimerResBenchmark
 
+> ⚠️ **EXPERIMENTAL FORK DISCLAIMER** ⚠️
+> 
+> This is an experimental fork with additional features and modifications. Many functions may be unstable or not work as expected. 
+> For reliable results and to find the optimal timer resolution value, it is recommended to use the [original repository](https://github.com/SwiftyPop/TimerResBenchmark).
+> 
+> **Use at your own risk.** Some experimental features may cause unexpected behavior or inaccurate results.
+
 <p align="center"><b>A Rust-based tool for benchmarking system timer resolution to achieve precise sleep intervals, optimizing performance and consistency for high-performance tasks like gaming, especially in low-latency scenarios. It automatically detects HPET status and identifies the optimal timer resolution for your system.</b></p>
 
 ![image](https://github.com/user-attachments/assets/72b39d18-94a8-4312-b7ac-d86f773520ce)
