@@ -43,14 +43,23 @@ pub fn topsis_ranking(measurements: &[TimerMeasurement]) -> Vec<TopsisScore> {
         ]);
     }
 
-    // Step 2: Normalization (vector normalization)
+    // Step 2: Normalization (vector normalization) ✅ С ЗАЩИТОЙ!
     let num_criteria = 4;
     let mut normalized: Vec<Vec<f64>> = vec![vec![0.0; num_criteria]; n];
     for j in 0..num_criteria {
         let sum_sq: f64 = matrix.iter().map(|row| row[j].powi(2)).sum();
         let norm = sum_sq.sqrt();
-        for i in 0..n {
-            normalized[i][j] = matrix[i][j] / norm;
+        
+        // ✅ ЗАЩИТА ОТ ДЕЛЕНИЯ НА 0
+        if norm < 1e-10 {
+            // Если все значения ≈ 0, используем равномерное распределение
+            for i in 0..n {
+                normalized[i][j] = 1.0 / (n as f64).sqrt();
+            }
+        } else {
+            for i in 0..n {
+                normalized[i][j] = matrix[i][j] / norm;
+            }
         }
     }
 
@@ -92,10 +101,24 @@ pub fn topsis_ranking(measurements: &[TimerMeasurement]) -> Vec<TopsisScore> {
     let mut scores: Vec<TopsisScore> = Vec::new();
     for (i, m) in measurements.iter().enumerate() {
         let ci_width = m.statistics.confidence_interval_95.1 - m.statistics.confidence_interval_95.0;
-        let cc = distances_anti[i] / (distances_ideal[i] + distances_anti[i]);
+        
+        // ✅ ЗАЩИТА ОТ ДЕЛЕНИЯ НА 0
+        let denominator = distances_ideal[i] + distances_anti[i];
+        let cc = if denominator.abs() < 1e-10 {
+            0.5  // Нейтральный score если обе дистанции близки к 0
+        } else {
+            distances_anti[i] / denominator
+        };
+        
+        let final_cc = if cc.is_nan() || cc.is_infinite() {
+            0.5  // Return neutral value as fallback
+        } else {
+            cc
+        };
+        
         scores.push(TopsisScore {
             resolution_ms: m.resolution_ms,
-            closeness_coefficient: cc,
+            closeness_coefficient: final_cc,
             rank: 0, // Will be filled after sorting
             criteria_scores: CriteriaScores {
                 p95_delta: m.statistics.p95,
@@ -107,7 +130,10 @@ pub fn topsis_ranking(measurements: &[TimerMeasurement]) -> Vec<TopsisScore> {
     }
 
     // Step 7: Ranking (higher CC = better)
-    scores.sort_by(|a, b| b.closeness_coefficient.partial_cmp(&a.closeness_coefficient).unwrap());
+    // ✅ ЗАЩИТА ОТ NaN В СОРТИРОВКЕ
+    scores.sort_by(|a, b| {
+        b.closeness_coefficient.partial_cmp(&a.closeness_coefficient).unwrap_or(std::cmp::Ordering::Equal)  // Fallback если NaN
+    });
     for (rank, score) in scores.iter_mut().enumerate() {
         score.rank = rank + 1;
     }

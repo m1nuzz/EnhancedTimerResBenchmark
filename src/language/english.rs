@@ -64,7 +64,7 @@ impl LocalizationKey {
             LocalizationKey::HybridMethodDesc1 => "Bayesian в†’ Local Grid в†’ Precise Refinement",
             LocalizationKey::HybridMethodDesc2 => "Precision: up to 0.0001 ms",
             LocalizationKey::HybridMethodDesc3 => "Time: ~5-7 minutes",
-            LocalizationKey::MethodChoice => "Your choice (1/2) [default: 2]: ",
+            LocalizationKey::MethodChoice => "Your choice (1/2/3) [default: 3]: ",
             LocalizationKey::IterationsLinear => "Iterations: {} (linear search)",
             LocalizationKey::IterationsHybrid => "Iterations: ~50 (3-phase optimization)",
             LocalizationKey::IncrementNotUsed => " (not used in 3-phase method)",
@@ -178,6 +178,12 @@ impl LocalizationKey {
             LocalizationKey::GetMeasurementStats => "   Mean(Δ): {:.4} ms, P95(Δ): {:.4} ms, MAD(Δ): {:.4} ms, Outliers removed: {}",
             LocalizationKey::GetMeasurementWithRuns => "Measuring {:.4} ms ({} runs × {} samples)",
             LocalizationKey::GetExitPrompt => "Press any key to exit...",
+            LocalizationKey::FastLinearMethod => "Fast Linear Search (Recommended)",
+            LocalizationKey::FastLinearMethodTitle => "🚀 FAST LINEAR SEARCH",
+            LocalizationKey::FastLinearMethodDesc1 => "Checks every point sequentially (FAST mode)",
+            LocalizationKey::FastLinearMethodDesc2 => "Early stopping (stops when optimum found)",
+            LocalizationKey::FastLinearMethodDesc3 => "1 run per point (50x faster than standard)",
+            LocalizationKey::FastLinearMethodDesc4 => "Optimal for most users (~2-5 minutes)",
         }
     }
 }

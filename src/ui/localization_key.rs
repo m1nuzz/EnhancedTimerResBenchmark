@@ -196,4 +196,12 @@ pub enum LocalizationKey {
     GetMeasurementStats,
     GetMeasurementWithRuns,
     GetExitPrompt,
+    
+    // Fast Linear Method
+    FastLinearMethod,
+    FastLinearMethodTitle,
+    FastLinearMethodDesc1,
+    FastLinearMethodDesc2,
+    FastLinearMethodDesc3,
+    FastLinearMethodDesc4,
 }

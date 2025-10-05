@@ -64,7 +64,7 @@ impl LocalizationKey {
             LocalizationKey::HybridMethodDesc1 => "Байесовская → Локальная сетка → Точное уточнение",
             LocalizationKey::HybridMethodDesc2 => "Точность: до 0.0001 ms",
             LocalizationKey::HybridMethodDesc3 => "Время: ~5-7 минут",
-            LocalizationKey::MethodChoice => "Ваш выбор (1/2) [по умолчанию: 2]: ",
+            LocalizationKey::MethodChoice => "Ваш выбор (1/2/3) [по умолчанию: 3]: ",
             LocalizationKey::IterationsLinear => "Итераций: {} (линейный перебор)",
             LocalizationKey::IterationsHybrid => "Итераций: ~50 (3-фазная оптимизация)",
             LocalizationKey::IncrementNotUsed => " (не используется в 3-фазном методе)",
@@ -178,7 +178,13 @@ impl LocalizationKey {
             LocalizationKey::TimeoutError => "{}",
             LocalizationKey::GetMeasurementStats => "среднее={:.4} ms, p95={:.4} ms, MAD={:.4} ms, выбросов={}",
             LocalizationKey::GetMeasurementWithRuns => "[TEST] Измерение {:.4} ms ({} прогонов x {} выборок)...",
-            LocalizationKey::GetExitPrompt => "Нажмите Enter для выхода..."
+            LocalizationKey::GetExitPrompt => "Нажмите Enter для выхода...",
+            LocalizationKey::FastLinearMethod => "Быстрый линейный поиск (Рекомендуется)",
+            LocalizationKey::FastLinearMethodTitle => "🚀 БЫСТРЫЙ ЛИНЕЙНЫЙ ПОИСК",
+            LocalizationKey::FastLinearMethodDesc1 => "Проверяет каждую точку последовательно (БЫСТРЫЙ режим)",
+            LocalizationKey::FastLinearMethodDesc2 => "Ранняя остановка (останавливается при нахождении оптимума)",
+            LocalizationKey::FastLinearMethodDesc3 => "1 прогон на точку (в 50 раз быстрее стандартного)",
+            LocalizationKey::FastLinearMethodDesc4 => "Оптимален для большинства пользователей (~2-5 минут)",
         }
     }
 }

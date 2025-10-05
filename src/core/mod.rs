@@ -358,6 +358,12 @@ pub async fn run_benchmark() -> io::Result<()> {
     println!("     • {}", localization.get(LocalizationKey::HybridMethodDesc2));
     println!("     • {}", localization.get(LocalizationKey::HybridMethodDesc3));
     println!();
+    println!("  {}  {}", "3.".bold().yellow(), localization.get(LocalizationKey::FastLinearMethod).bold().green());
+    println!("     • {}", localization.get(LocalizationKey::FastLinearMethodDesc1));
+    println!("     • {}", localization.get(LocalizationKey::FastLinearMethodDesc2));
+    println!("     • {}", localization.get(LocalizationKey::FastLinearMethodDesc3));
+    println!("     • {}", localization.get(LocalizationKey::FastLinearMethodDesc4));
+    println!();
     let mut method_input = String::new();
     print!("{}", localization.get(LocalizationKey::MethodChoice));
     io::stdout().flush()?;
@@ -510,7 +516,7 @@ pub async fn run_benchmark() -> io::Result<()> {
                 }
             }
         },
-        "2" | "" => {
+        "2" => {
             match optimize_timer_resolution(
                 &parameters,
                 &set_timer_resolution_path,
@@ -520,6 +526,22 @@ pub async fn run_benchmark() -> io::Result<()> {
                 Ok(r) => r,
                 Err(e) => {
                     eprintln!("{}", localization.get_error_optimization(&e.to_string()));
+                    kill_all_timer_processes()?;
+                    return Err(e);
+                }
+            }
+        },
+        "3" | "" => {
+            // ✅ NEW: FAST LINEAR SEARCH (recommended, early stopping + 1 run)
+            match fast_linear_search(
+                &parameters,
+                &set_timer_resolution_path,
+                &measure_sleep_path,
+                &localization,
+            ).await {
+                Ok(r) => r,
+                Err(e) => {
+                    eprintln!("\n❌ FAST LINEAR SEARCH FAILED: {}", e);
                     kill_all_timer_processes()?;
                     return Err(e);
                 }
@@ -1145,6 +1167,186 @@ async fn linear_exhaustive_search(
     let best = &topsis_results[0];
     println!("{}", localization.get_optimal_value(best.resolution_ms));
     println!("   {}\n", localization.get_optimal_recommendation((best.resolution_ms * 10_000.0) as i32));
+
+    Ok(OptimizationResult {
+        optimal_resolution: topsis_results[0].resolution_ms,
+        topsis_score: topsis_results[0].closeness_coefficient,
+        aggregated_measurements: aggregated,
+        topsis_rankings: topsis_results,
+    })
+}
+
+// ============================================================================ 
+// FAST LINEAR SEARCH (METHOD 3) - с early stopping и 1 run
+// ============================================================================
+
+async fn fast_linear_search(
+    params: &BenchmarkingParameters,
+    set_timer_path: &PathBuf,
+    measure_sleep_path: &PathBuf,
+    localization: &Localization,
+) -> io::Result<OptimizationResult> {
+    // ✅ ВАЛИДАЦИЯ: минимум 2 samples
+    if params.sample_value < 2 {
+        return Err(Error::new(ErrorKind::InvalidInput,
+            "Sample Value must be at least 2 for MeasureSleep.exe"));
+    }
+    
+    println!("\n{}", localization.get(LocalizationKey::FastLinearMethodTitle));
+    println!("━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━");
+    
+    // Weights may be used for other purposes in TOPSIS calculations
+    let _weights = PerformanceWeights::default();
+    let total_points = ((params.end_value - params.start_value) / params.increment_value).ceil() as usize;
+    
+    println!("📊 Parameters:");
+    println!("   Range: [{:.4}, {:.4}] ms", params.start_value, params.end_value);
+    println!("   Step: {:.4} ms", params.increment_value);
+    println!("   Max points: {} (early stopping enabled)", total_points);
+    println!("   Runs per point: 1 (fast mode)");
+    println!("   Samples per run: {}", params.sample_value);
+    println!("   Early stop threshold: 30 points without improvement");
+    println!();
+    
+    // Приблизительное время (1 run = ~2 секунды на точку)
+    let estimated_time = (total_points as f64 * 2.0) / 60.0;
+    println!("⏱️  Estimated time (worst case): {:.1} minutes", estimated_time);
+    println!("   (Expected: ~2-5 minutes with early stopping)\n");
+    
+    println!("📝 Note: {} points will be tested (max). Real-time ETA will be shown after first 5 measurements.\n", total_points);
+    
+    let pb = ProgressBar::new(total_points as u64);
+    pb.set_style(
+        ProgressStyle::default_bar()
+            .template("{spinner:.green} [{elapsed_precise}] [{bar:40.cyan/blue}] {pos}/{len} {msg} | ETA: {eta}")
+            .unwrap()
+            .progress_chars("##-")
+    );
+    
+    let mut measurements = Vec::new();
+    let mut no_improvement_counter = 0;
+    const EARLY_STOP_THRESHOLD: usize = 30;
+    let start_time = std::time::Instant::now();
+    
+    const MIN_SAMPLES_FOR_ETA: usize = 5;
+    const EMA_ALPHA: f64 = 0.3;
+    let mut ema_time_per_point: Option<f64> = None;
+    
+    let mut point_index = 0;
+    let mut current = params.start_value;
+    
+    while current <= params.end_value && point_index < total_points {
+        pb.set_message(format!("{:.4} ms", current));
+        
+        let measurement = measure_resolution_robust(
+            current,
+            params.sample_value,
+            1,  // ✅ 1 run для БЫСТРОГО режима!
+            set_timer_path,
+            measure_sleep_path,
+            localization,
+        ).await?;
+        
+        measurements.push(measurement);
+        pb.inc(1);
+
+        // ✅ DISPLAY current best WITH TOPSIS Score (switching from P95 after 10 measurements)
+        if !measurements.is_empty() {
+            if measurements.len() < 10 {
+                // ✅ ДЛЯ ПЕРВЫХ 9 ИТЕРАЦИЙ: показываем P95
+                let current_best = measurements.iter()
+                    .min_by(|a, b| {
+                        a.statistics.p95.partial_cmp(&b.statistics.p95).unwrap()
+                    })
+                    .unwrap();
+                pb.println(format!("       Current best: {:.4} ms (P95: {:.4} ms)",
+                    current_best.resolution_ms,
+                    current_best.statistics.p95));
+            } else {
+                // ✅ ДЛЯ 10+ ИТЕРАЦИЙ: показываем TOPSIS
+                let temp_aggregated = aggregate_measurements(&measurements);
+                let temp_topsis = topsis_ranking(&temp_aggregated);
+                if !temp_topsis.is_empty() {
+                    let best = &temp_topsis[0];
+                    pb.println(format!("       Current best: {:.4} ms (TOPSIS: {:.4})",
+                        best.resolution_ms,
+                        best.closeness_coefficient));
+                    
+                    // ✅ EARLY STOPPING LOGIC (ИСПРАВЛЕНО!)
+                    // Сравниваем текущую точку с лучшей по resolution_ms
+                    if (current - best.resolution_ms).abs() > 0.003 {  // 30 шагов по 0.0001 ms
+                        no_improvement_counter += 1;
+                        if no_improvement_counter >= EARLY_STOP_THRESHOLD {
+                            println!("\n✅ Early stopping triggered: {} points without improvement", 
+                                     EARLY_STOP_THRESHOLD);
+                            println!("   Best found: {:.4} ms", best.resolution_ms);
+                            break;
+                        }
+                    } else {
+                        no_improvement_counter = 0;  // Сброс если близко к оптимуму
+                    }
+                }
+            }
+        }
+
+        // Adaptive ETA с EMA сглаживанием
+        if point_index + 1 >= MIN_SAMPLES_FOR_ETA {
+            let elapsed = start_time.elapsed().as_secs_f64();
+            let instant_time_per_point = elapsed / ((point_index + 1) as f64);
+            let smoothed_time = match ema_time_per_point {
+                Some(prev_ema) => EMA_ALPHA * instant_time_per_point + (1.0 - EMA_ALPHA) * prev_ema,
+                None => instant_time_per_point
+            };
+            ema_time_per_point = Some(smoothed_time);
+            let remaining_points = total_points - (point_index + 1);
+            let eta_seconds = smoothed_time * (remaining_points as f64);
+            let eta_display = if eta_seconds < 90.0 {
+                format!("{:.0}s", eta_seconds)
+            } else if eta_seconds < 5400.0 {  // < 90 min
+                format!("{:.1}m", eta_seconds / 60.0)
+            } else {
+                format!("{:.2}h", eta_seconds / 3600.0)
+            };
+            pb.set_message(format!("{:.4} ms | ETA: {}", current, eta_display));
+        } else {
+            pb.set_message(format!("{:.4} ms | ETA: calculating...", current));
+        }
+        
+        current += params.increment_value;
+        point_index += 1;
+    }
+    
+    let total_time = start_time.elapsed().as_secs_f64() / 60.0;
+    pb.finish_with_message("fast linear search completed");
+    
+    let aggregated = aggregate_measurements(&measurements);
+    let topsis_results = topsis_ranking(&aggregated);
+    
+    println!("\n✅ Fast linear search completed:");
+    println!("   Points checked: {}/{}", measurements.len(), total_points);
+    println!("   Unique: {}", aggregated.len());
+    println!("   Total time: {:.1} minutes\n", total_time);
+
+    // ✅ TOP-5 RESULTS (как в других методах)
+    println!("\n{}", localization.get(LocalizationKey::TopsisRanking));
+    println!("━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n");
+    
+    for (i, result) in topsis_results.iter().take(5).enumerate() {
+        let marker = if i == 0 { "🥇" } else if i == 1 { "🥈" } else if i == 2 { "🥉" } else { "    " };
+        println!("{}  Rank {}: {:.4} ms", marker, result.rank, result.resolution_ms);
+        println!("   TOPSIS Score: {:.4}", result.closeness_coefficient);
+        println!("   P95(Δ): {:.4} ms", result.criteria_scores.p95_delta);
+        println!("   MAD(Δ): {:.4} ms", result.criteria_scores.mad);
+        println!("   P95(Δ): {:.4} ms", result.criteria_scores.p99_delta);
+        println!("   95% CI width: {:.4} ms", result.criteria_scores.confidence_width);
+        println!();
+    }
+
+    let best = &topsis_results[0];
+    println!("✅ RECOMMENDED VALUE: {:.4} ms", best.resolution_ms);
+    println!("   {} --resolution {} --no-console\n",
+        (best.resolution_ms * 10_000.0) as i32,
+        (best.resolution_ms * 10_000.0) as i32);
 
     Ok(OptimizationResult {
         optimal_resolution: topsis_results[0].resolution_ms,

@@ -64,7 +64,7 @@ impl LocalizationKey {
             LocalizationKey::HybridMethodDesc1 => "贝叶斯 → 局部网格 → 精确细化",
             LocalizationKey::HybridMethodDesc2 => "精度: 高达0.0001毫秒",
             LocalizationKey::HybridMethodDesc3 => "时间: ~5-7分钟",
-            LocalizationKey::MethodChoice => "您的选择 (1/2) [默认: 2]: ",
+            LocalizationKey::MethodChoice => "您的选择 (1/2/3) [默认: 3]: ",
             LocalizationKey::IterationsLinear => "迭代次数: {} (线性搜索)",
             LocalizationKey::IterationsHybrid => "迭代次数: ~50 (3阶段优化)",
             LocalizationKey::IncrementNotUsed => " (在3阶段方法中不使用)",
@@ -178,6 +178,12 @@ impl LocalizationKey {
             LocalizationKey::GetMeasurementStats => "   平均值(Δ): {:.4} ms, P95(Δ): {:.4} ms, MAD(Δ): {:.4} ms, 离群值已移除: {}",
             LocalizationKey::GetMeasurementWithRuns => "测量 {:.4} ms ({} 次运行 × {} 个样本)",
             LocalizationKey::GetExitPrompt => "按任意键退出...",
+            LocalizationKey::FastLinearMethod => "快速线性搜索（推荐）",
+            LocalizationKey::FastLinearMethodTitle => "🚀 快速线性搜索",
+            LocalizationKey::FastLinearMethodDesc1 => "顺序检查每个点（快速模式）",
+            LocalizationKey::FastLinearMethodDesc2 => "提前停止（找到最优值时停止）",
+            LocalizationKey::FastLinearMethodDesc3 => "每点1次运行（比标准快50倍）",
+            LocalizationKey::FastLinearMethodDesc4 => "最适合大多数用户（约2-5分钟）",
         }
     }
 }

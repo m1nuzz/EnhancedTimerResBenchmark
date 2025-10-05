@@ -64,7 +64,7 @@ impl LocalizationKey {
             LocalizationKey::HybridMethodDesc1 => "Байесівська → Локальна сітка → Точне уточнення",
             LocalizationKey::HybridMethodDesc2 => "Точність: до 0.0001 мс",
             LocalizationKey::HybridMethodDesc3 => "Час: ~5-7 хвилин",
-            LocalizationKey::MethodChoice => "Ваш вибір (1/2) [за замовчуванням: 2]: ",
+            LocalizationKey::MethodChoice => "Ваш вибір (1/2/3) [за замовчуванням: 3]: ",
             LocalizationKey::IterationsLinear => "Ітерацій: {} (лінійний пошук)",
             LocalizationKey::IterationsHybrid => "Ітерацій: ~50 (3-фазна оптимізація)",
             LocalizationKey::IncrementNotUsed => " (не використовується в 3-фазному методі)",
@@ -178,6 +178,12 @@ impl LocalizationKey {
             LocalizationKey::GetMeasurementStats => "   Середнє(Δ): {:.4} мс, P95(Δ): {:.4} мс, MAD(Δ): {:.4} мс, Викидів видалено: {}",
             LocalizationKey::GetMeasurementWithRuns => "Вимірювання {:.4} мс ({} запусків × {} вибірок)",
             LocalizationKey::GetExitPrompt => "Натисніть будь-яку клавішу для виходу...",
+            LocalizationKey::FastLinearMethod => "Швидкий лінійний пошук (Рекомендується)",
+            LocalizationKey::FastLinearMethodTitle => "🚀 ШВИДКИЙ ЛІНІЙНИЙ ПОШУК",
+            LocalizationKey::FastLinearMethodDesc1 => "Перевіряє кожну точку послідовно (ШВИДКИЙ режим)",
+            LocalizationKey::FastLinearMethodDesc2 => "Рання зупинка (зупиняється при знаходженні оптимуму)",
+            LocalizationKey::FastLinearMethodDesc3 => "1 прогон на точку (у 50 разів швидше стандартного)",
+            LocalizationKey::FastLinearMethodDesc4 => "Оптимальний для більшості користувачів (~2-5 хвилин)",
         }
     }
 }
