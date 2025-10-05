@@ -4,6 +4,8 @@
 
 use std::io;
 
+use crate::ui::localization::LocalizationKey;
+
 /// Parse measurement output from MeasureSleep.exe
 pub fn parse_measurement_output(output: &[u8]) -> io::Result<(f64, f64)> {
     let output_str = std::str::from_utf8(output)
@@ -35,7 +37,9 @@ pub fn prompt(
 ) -> io::Result<Option<String>> {
     let mut input = String::new();
     println!("▸ {}: {}{}", description, current, localization.get_keep_current());
-    println!("{}", localization.get_enter_new_value());
+    // Format the enter new value prompt with the description
+    let prompt_message = localization.get(LocalizationKey::EnterNewValue).replace("{}", description);
+    println!("{}", prompt_message);
     io::stdin().read_line(&mut input)?;
     let trimmed = input.trim();
     if trimmed.is_empty() {
