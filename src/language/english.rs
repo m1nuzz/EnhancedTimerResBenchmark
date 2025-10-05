@@ -182,8 +182,9 @@ impl LocalizationKey {
             LocalizationKey::FastLinearMethodTitle => "🚀 FAST LINEAR SEARCH",
             LocalizationKey::FastLinearMethodDesc1 => "Checks every point sequentially (FAST mode)",
             LocalizationKey::FastLinearMethodDesc2 => "Early stopping (stops when optimum found)",
-            LocalizationKey::FastLinearMethodDesc3 => "1 run per point (50x faster than standard)",
+            LocalizationKey::FastLinearMethodDesc3 => "Configurable early stop threshold (fast completion)",
             LocalizationKey::FastLinearMethodDesc4 => "Optimal for most users (~2-5 minutes)",
+            LocalizationKey::EarlyStopThreshold => "Early Stop Threshold",
         }
     }
 }

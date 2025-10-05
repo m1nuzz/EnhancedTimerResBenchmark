@@ -204,4 +204,5 @@ pub enum LocalizationKey {
     FastLinearMethodDesc2,
     FastLinearMethodDesc3,
     FastLinearMethodDesc4,
+    EarlyStopThreshold,
 }

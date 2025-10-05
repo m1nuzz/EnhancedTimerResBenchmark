@@ -182,8 +182,9 @@ impl LocalizationKey {
             LocalizationKey::FastLinearMethodTitle => "🚀 ШВИДКИЙ ЛІНІЙНИЙ ПОШУК",
             LocalizationKey::FastLinearMethodDesc1 => "Перевіряє кожну точку послідовно (ШВИДКИЙ режим)",
             LocalizationKey::FastLinearMethodDesc2 => "Рання зупинка (зупиняється при знаходженні оптимуму)",
-            LocalizationKey::FastLinearMethodDesc3 => "1 прогон на точку (у 50 разів швидше стандартного)",
+            LocalizationKey::FastLinearMethodDesc3 => "Налаштовуваний поріг ранньої зупинки (швидке завершення)",
             LocalizationKey::FastLinearMethodDesc4 => "Оптимальний для більшості користувачів (~2-5 хвилин)",
+            LocalizationKey::EarlyStopThreshold => "Поріг ранньої зупинки",
         }
     }
 }

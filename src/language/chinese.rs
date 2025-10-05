@@ -182,8 +182,9 @@ impl LocalizationKey {
             LocalizationKey::FastLinearMethodTitle => "🚀 快速线性搜索",
             LocalizationKey::FastLinearMethodDesc1 => "顺序检查每个点（快速模式）",
             LocalizationKey::FastLinearMethodDesc2 => "提前停止（找到最优值时停止）",
-            LocalizationKey::FastLinearMethodDesc3 => "每点1次运行（比标准快50倍）",
+            LocalizationKey::FastLinearMethodDesc3 => "可配置的早停阈值（快速完成）",
             LocalizationKey::FastLinearMethodDesc4 => "最适合大多数用户（约2-5分钟）",
+            LocalizationKey::EarlyStopThreshold => "早停阈值",
         }
     }
 }

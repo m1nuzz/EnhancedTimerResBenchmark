@@ -39,6 +39,14 @@ struct BenchmarkingParameters {
     end_value: f64,
     #[serde(rename = "SampleValue", deserialize_with = "validate_positive_i32")]
     sample_value: i32,
+    // ✅ НОВЫЙ ПАРАМЕТР!
+    #[serde(rename = "EarlyStopThreshold", default = "default_early_stop_threshold")]
+    early_stop_threshold: usize,
+}
+
+// Default value если параметр отсутствует в JSON
+fn default_early_stop_threshold() -> usize {
+    30
 }
 
 fn validate_positive_f64<'de, D>(deserializer: D) -> Result<f64, D::Error>
@@ -404,6 +412,23 @@ pub async fn run_benchmark() -> io::Result<()> {
             }
             if let Some(new_value) = prompt(&localization.get(LocalizationKey::SampleValue), &params.sample_value.to_string())? {
                 params.sample_value = new_value.parse().map_err(|e| Error::new(ErrorKind::InvalidInput, e))?;
+            }
+
+            // ✅ НОВЫЙ БЛОК: Early Stop Threshold (только для метода 3)
+            if optimization_method == "3" {
+                println!("\n▸ Early Stop Threshold: {} (current)", params.early_stop_threshold);
+                println!("   • 30:  Fast (~5 min, checks ~60-150 points)");
+                println!("   • 50:  Balanced (~10 min, checks ~100-200 points)");
+                println!("   • 100: Thorough (~20 min, checks ~200-300 points)");
+                println!("   • 1000: No early stop (full search, ~33 min)");
+                if let Some(new_value) = prompt(&localization.get(LocalizationKey::EarlyStopThreshold),
+                    &params.early_stop_threshold.to_string())? {
+                    let parsed: usize = new_value.parse().map_err(|e| Error::new(ErrorKind::InvalidInput, e))?;
+                    if parsed < 10 {
+                        eprintln!("⚠️ Warning: Threshold < 10 may stop too early");
+                    }
+                    params.early_stop_threshold = parsed;
+                }
             }
 
             match optimization_method {
@@ -1205,7 +1230,7 @@ async fn fast_linear_search(
     println!("   Max points: {} (early stopping enabled)", total_points);
     println!("   Runs per point: 1 (fast mode)");
     println!("   Samples per run: {}", params.sample_value);
-    println!("   Early stop threshold: 30 points without improvement");
+    println!("   Early stop threshold: {} points without improvement", params.early_stop_threshold);
     println!();
     
     // Приблизительное время (1 run = ~2 секунды на точку)
@@ -1225,7 +1250,7 @@ async fn fast_linear_search(
     
     let mut measurements = Vec::new();
     let mut no_improvement_counter = 0;
-    const EARLY_STOP_THRESHOLD: usize = 30;
+    let early_stop_threshold = params.early_stop_threshold;  // ✅ Из параметров!
     let start_time = std::time::Instant::now();
     
     const MIN_SAMPLES_FOR_ETA: usize = 5;
@@ -1276,9 +1301,9 @@ async fn fast_linear_search(
                     // Сравниваем текущую точку с лучшей по resolution_ms
                     if (current - best.resolution_ms).abs() > 0.003 {  // 30 шагов по 0.0001 ms
                         no_improvement_counter += 1;
-                        if no_improvement_counter >= EARLY_STOP_THRESHOLD {
+                        if no_improvement_counter >= early_stop_threshold {
                             println!("\n✅ Early stopping triggered: {} points without improvement", 
-                                     EARLY_STOP_THRESHOLD);
+                                     early_stop_threshold);
                             println!("   Best found: {:.4} ms", best.resolution_ms);
                             break;
                         }
